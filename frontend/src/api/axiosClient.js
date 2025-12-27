@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:5000/api', // Địa chỉ Backend của bạn
+  baseURL: 'http://BE-VVNSPKT-XTN2026:5000/api', // Địa chỉ Backend của bạn
   headers: {
     'Content-Type': 'application/json',
   },
