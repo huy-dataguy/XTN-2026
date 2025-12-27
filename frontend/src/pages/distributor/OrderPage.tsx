@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Product, User } from '../../types';
-import { OrderService } from '../../services/mockBackend';
-import { ShoppingCart } from 'lucide-react';
+import { orderService } from '../../services/orderService'; // <--- IMPORT MỚI
+import { ShoppingCart, Loader2 } from 'lucide-react'; // Thêm icon Loader
 
 interface OrderPageProps {
   user: User;
@@ -11,6 +11,7 @@ interface OrderPageProps {
 
 export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuccess }) => {
   const [cart, setCart] = useState<{productId: string, quantity: number}[]>([]);
+  const [isLoading, setIsLoading] = useState(false); // <--- STATE MỚI: Để hiện loading
 
   const addToCart = (productId: string) => {
     setCart(prev => {
@@ -28,12 +29,26 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
     }
   };
 
-  const submitOrder = () => {
+  // --- HÀM GỌI API MỚI ---
+  const submitOrder = async () => {
     if (cart.length === 0) return;
-    OrderService.create(user.id, user.name, cart);
-    setCart([]);
-    alert('Order placed successfully!');
-    onOrderSuccess();
+
+    setIsLoading(true); // Bắt đầu loading
+    try {
+      // Gọi API thực tế. 
+      // Lưu ý: Không cần gửi user.id, Backend tự lấy từ Token.
+      await orderService.create(cart);
+      
+      setCart([]); // Xóa giỏ hàng
+      alert('Order placed successfully!');
+      onOrderSuccess(); // Refresh lại dữ liệu ở App.tsx
+    } catch (error: any) {
+      // Xử lý lỗi từ Backend trả về
+      const message = error.response?.data?.msg || 'Failed to place order';
+      alert(`Error: ${message}`);
+    } finally {
+      setIsLoading(false); // Tắt loading dù thành công hay thất bại
+    }
   };
 
   const cartTotal = cart.reduce((acc, item) => {
@@ -113,10 +128,18 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
            </div>
            <button 
              onClick={submitOrder} 
-             disabled={cart.length === 0}
-             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+             // Khóa nút khi giỏ hàng rỗng HOẶC đang loading
+             disabled={cart.length === 0 || isLoading}
+             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
            >
-             Confirm Order
+             {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Processing...
+                </>
+             ) : (
+                'Confirm Order'
+             )}
            </button>
          </div>
       </div>
