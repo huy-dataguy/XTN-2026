@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, UserRole, ReportStatus, WeeklyReport } from '../types';
+import { Link, useLocation } from 'react-router-dom'; // Import mới
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -14,49 +15,61 @@ import {
 
 interface SidebarProps {
   user: User;
-  activeTab: string;
-  setActiveTab: (tab: any) => void;
-  reports: WeeklyReport[]; 
+  reports?: WeeklyReport[]; // Cho phép undefined để tránh lỗi khi chưa load
   onLogout: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab, reports, onLogout }) => {
-  // Đếm số báo cáo PENDING để hiện số trên Badge
+export const Sidebar: React.FC<SidebarProps> = ({ user, reports = [], onLogout }) => {
+  const location = useLocation(); // Lấy URL hiện tại
+  const currentPath = location.pathname;
+
+  // Đếm số báo cáo PENDING
   const pendingReportsCount = reports.filter(r => r.status === ReportStatus.PENDING).length;
 
-  const NavItem = ({ id, icon: Icon, label, badgeCount }: any) => (
-    <button 
-      onClick={() => setActiveTab(id)} 
-      className={`group flex items-center w-full p-3 rounded-xl transition-all mb-1 ${
-        activeTab === id 
-        ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
-        : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600'
-      }`}
-    >
-      <Icon className={`w-5 h-5 mr-3 ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} /> 
-      <span className="flex-1 text-left font-medium">{label}</span>
-      
-      {/* Badge hiển thị số lượng */}
-      {badgeCount > 0 && (
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-          activeTab === id ? 'bg-white text-blue-600' : 'bg-red-500 text-white'
-        }`}>
-          {badgeCount > 9 ? '9+' : badgeCount}
-        </span>
-      )}
-    </button>
-  );
+  // Hàm kiểm tra active dựa trên URL
+  const isActive = (path: string) => {
+    if (path === '/' && currentPath === '/') return true;
+    if (path !== '/' && currentPath.startsWith(path)) return true;
+    return false;
+  };
+
+  const NavItem = ({ to, icon: Icon, label, badgeCount }: any) => {
+    const active = isActive(to);
+    
+    return (
+      <Link 
+        to={to} 
+        className={`group flex items-center w-full p-3 rounded-xl transition-all mb-1 ${
+          active 
+          ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
+          : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600'
+        }`}
+      >
+        <Icon className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} /> 
+        <span className="flex-1 text-left font-medium">{label}</span>
+        
+        {/* Badge hiển thị số lượng */}
+        {badgeCount > 0 && (
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            active ? 'bg-white text-blue-600' : 'bg-red-500 text-white'
+          }`}>
+            {badgeCount > 9 ? '9+' : badgeCount}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col h-screen sticky top-0">
       {/* Logo Section */}
       <div className="p-6">
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
              <Package className="text-white w-5 h-5" />
           </div>
-          <h1 className="text-xl font-black text-slate-800 tracking-tight">Distri<span className="text-blue-600">Flow</span></h1>
-        </div>
+          <h1 className="text-xl font-black text-slate-800 tracking-tight">XTN<span className="text-blue-600">2026</span></h1>
+        </Link>
       </div>
       
       {/* Navigation */}
@@ -65,18 +78,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeTab, setActiveTab,
         
         {user.role === UserRole.ADMIN ? (
           <>
-            <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
-            <NavItem id="users" icon={Users} label="Accounts" />
-            <NavItem id="products" icon={Package} label="Products" />
-            <NavItem id="orders" icon={ShoppingCart} label="Orders" />
-            <NavItem id="reports" icon={ClipboardList} label="Approve Reports" badgeCount={pendingReportsCount} />
+            <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
+            <NavItem to="/users" icon={Users} label="Accounts" />
+            <NavItem to="/products" icon={Package} label="Products" />
+            <NavItem to="/orders" icon={ShoppingCart} label="Orders" />
+            <NavItem to="/reports" icon={ClipboardList} label="Approve Reports" badgeCount={pendingReportsCount} />
           </>
         ) : (
           <>
-            <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
-            <NavItem id="order" icon={ShoppingCart} label="Place Order" />
-            <NavItem id="report" icon={FileBarChart} label="Weekly Report" />
-            <NavItem id="history" icon={History} label="History Log" />
+            <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
+            <NavItem to="/order" icon={ShoppingCart} label="Place Order" />
+            <NavItem to="/report" icon={FileBarChart} label="Weekly Report" />
+            <NavItem to="/history" icon={History} label="History Log" />
           </>
         )}
       </nav>

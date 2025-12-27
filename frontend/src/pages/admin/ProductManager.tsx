@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../../types';
-import { productService } from '../../services/productService'; // Service thật
-import { Plus, Trash2, Loader2, Image as ImageIcon } from 'lucide-react'; 
+import { productService } from '../../services/productService'; 
+import { Plus, Trash2, Loader2, Image as ImageIcon, Pencil } from 'lucide-react'; // Thêm icon Pencil
 
 interface ProductManagerProps {
   products: Product[];
@@ -12,7 +12,10 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
+  // State mới: Lưu ID của sản phẩm đang sửa (nếu null nghĩa là đang tạo mới)
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<Partial<Product>>({ 
     name: '', 
     price: 0, 
     stock: 0, 
@@ -20,33 +23,57 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
     image: '' 
   });
 
-  // --- CREATE ---
+  // --- ACTIONS ---
+
+  // 1. Mở modal để TẠO MỚI
+  const openCreateModal = () => {
+    setEditingId(null); // Reset ID
+    setFormData({ name: '', price: 0, stock: 0, category: '', image: '' }); // Reset Form
+    setIsModalOpen(true);
+  };
+
+  // 2. Mở modal để SỬA
+  const openEditModal = (product: Product) => {
+    setEditingId(product.id); // Lưu ID đang sửa
+    setFormData({ ...product }); // Đổ dữ liệu cũ vào form
+    setIsModalOpen(true);
+  };
+
+  // 3. Xử lý LƯU (Create hoặc Update)
   const handleSave = async () => {
-    if (!newProduct.name || !newProduct.price) {
+    if (!formData.name || !formData.price) {
       alert("Please fill in Name and Price");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await productService.create({
-        ...newProduct,
-        // Placeholder nếu không có ảnh
-        image: newProduct.image || 'https://placehold.co/400?text=No+Image'
-      });
+      const payload = {
+        ...formData,
+        image: formData.image || 'https://placehold.co/400?text=No+Image'
+      };
+
+      if (editingId) {
+        // --- CASE UPDATE ---
+        // Giả định service có hàm update(id, data)
+        await productService.update(editingId, payload);
+        alert('Product updated successfully!');
+      } else {
+        // --- CASE CREATE ---
+        await productService.create(payload);
+        alert('Product created successfully!');
+      }
 
       setIsModalOpen(false);
-      setNewProduct({ name: '', price: 0, stock: 0, category: '', image: '' });
       onRefresh(); // Refresh list
-      alert('Product created successfully!');
     } catch (error: any) {
-      alert(error.response?.data?.msg || 'Failed to create product');
+      alert(error.response?.data?.msg || 'Failed to save product');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // --- DELETE ---
+  // 4. Xử lý XÓA
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
@@ -63,7 +90,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-slate-800">Product Inventory</h2>
         <button 
-          onClick={() => setIsModalOpen(true)} 
+          onClick={openCreateModal} // Đổi thành hàm openCreateModal
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm"
         >
           <Plus className="w-4 h-4 mr-2" /> Add Product
@@ -90,8 +117,18 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
                  <span className="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded mt-1 font-medium">{p.category}</span>
               </div>
               
-              <div className="mt-auto flex justify-between items-center pt-4 border-t border-slate-100">
-                <span className="text-xl font-bold text-blue-600">${p.price.toLocaleString()}</span>
+              <div className="mt-auto flex justify-between items-center pt-4 border-t border-slate-100 gap-2">
+                <span className="text-xl font-bold text-blue-600 mr-auto">${p.price.toLocaleString()}</span>
+                
+                {/* BUTTON EDIT */}
+                <button 
+                  onClick={() => openEditModal(p)} 
+                  className="flex items-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition text-sm font-medium"
+                >
+                  <Pencil className="w-4 h-4 mr-1" /> Edit
+                </button>
+
+                {/* BUTTON DELETE */}
                 <button 
                   onClick={() => handleDelete(p.id)} 
                   className="flex items-center text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition text-sm font-medium"
@@ -108,31 +145,34 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
-            <h3 className="text-xl font-bold mb-4 text-slate-800">Add New Product</h3>
+            <h3 className="text-xl font-bold mb-4 text-slate-800">
+              {editingId ? 'Edit Product' : 'Add New Product'}
+            </h3>
+            
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Product Name</label>
                 <input type="text" className="w-full border border-slate-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Price ($)</label>
                   <input type="number" className="w-full border border-slate-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 outline-none" 
-                    value={newProduct.price || ''} onChange={e => setNewProduct({...newProduct, price: Number(e.target.value)})} />
+                    value={formData.price || ''} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Stock Qty</label>
                   <input type="number" className="w-full border border-slate-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 outline-none" 
-                    value={newProduct.stock || ''} onChange={e => setNewProduct({...newProduct, stock: Number(e.target.value)})} />
+                    value={formData.stock || ''} onChange={e => setFormData({...formData, stock: Number(e.target.value)})} />
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label>
                 <input type="text" className="w-full border border-slate-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} />
+                  value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} />
               </div>
 
               <div>
@@ -140,7 +180,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
                 <div className="relative">
                     <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                     <input type="text" placeholder="https://..." className="w-full border border-slate-300 p-2.5 pl-9 rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 outline-none" 
-                    value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} />
+                    value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} />
                 </div>
               </div>
             </div>
@@ -160,9 +200,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {editingId ? 'Updating...' : 'Saving...'}
                   </>
-                ) : 'Save Product'}
+                ) : (
+                  editingId ? 'Update Product' : 'Save Product'
+                )}
               </button>
             </div>
           </div>
