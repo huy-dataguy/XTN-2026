@@ -65,14 +65,17 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
   // Tính toán Thống kê theo Group
   const groupStats = useMemo(() => {
     const stats = {
-      [DistributorGroup.GOLD]: { revenue: 0, count: 0 },
-      [DistributorGroup.SILVER]: { revenue: 0, count: 0 },
-      [DistributorGroup.NEW]: { revenue: 0, count: 0 },
+      [DistributorGroup.TaiChinh]: { revenue: 0, count: 0 },
+      [DistributorGroup.VanPhong]: { revenue: 0, count: 0 },
+      [DistributorGroup.SuKien]: { revenue: 0, count: 0 },
+      [DistributorGroup.TruyenThong]: { revenue: 0, count: 0 },
+      [DistributorGroup.HauCan]: { revenue: 0, count: 0 },
+      [DistributorGroup.BanBep]: { revenue: 0, count: 0 },
     };
 
     ordersInWeek.forEach(order => {
       const user = getUserInfo(order.distributorId);
-      const group = user?.group || DistributorGroup.NEW;
+      const group = user?.group || DistributorGroup.TaiChinh;
       
       if (stats[group]) {
         stats[group].revenue += order.totalAmount;
@@ -156,12 +159,17 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
 
       {/* GROUP STATS CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[DistributorGroup.GOLD, DistributorGroup.SILVER, DistributorGroup.NEW].map(group => {
+        {[DistributorGroup.TaiChinh, DistributorGroup.VanPhong, DistributorGroup.SuKien, DistributorGroup.TruyenThong, DistributorGroup.HauCan, DistributorGroup.BanBep].map(group => {
           const isActive = filterGroup === group;
           const stat = groupStats[group];
           const colorStyles = 
-            group === DistributorGroup.GOLD ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
-            group === DistributorGroup.SILVER ? 'bg-slate-50 border-slate-200 text-slate-800' :
+            group === DistributorGroup.TaiChinh ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+            group === DistributorGroup.VanPhong ? 'bg-slate-50 border-slate-200 text-slate-800' :
+            group === DistributorGroup.SuKien ? 'bg-purple-50 border-purple-200 text-purple-800' :
+            group === DistributorGroup.TruyenThong ? 'bg-green-50 border-green-200 text-green-800' :
+            group === DistributorGroup.HauCan ? 'bg-red-50 border-red-200 text-red-800' :
+            group === DistributorGroup.BanBep ? 'bg-purple-50 border-purple-200 text-purple-800' :
+            
             'bg-blue-50 border-blue-200 text-blue-800';
 
           return (

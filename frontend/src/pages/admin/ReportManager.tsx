@@ -42,13 +42,16 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
   // 2. Tính toán Thống kê Group
   const groupStats = useMemo(() => {
     const stats = {
-      [DistributorGroup.GOLD]: { revenue: 0, sold: 0, count: 0 },
-      [DistributorGroup.SILVER]: { revenue: 0, sold: 0, count: 0 },
-      [DistributorGroup.NEW]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.TaiChinh]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.VanPhong]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.SuKien]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.TruyenThong]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.HauCan]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.BanBep]: { revenue: 0, sold: 0, count: 0 },
     };
 
     reportsInWeek.forEach(r => {
-      const group = r.distributorGroup || DistributorGroup.NEW;
+      const group = r.distributorGroup || DistributorGroup.TaiChinh;
       if (stats[group]) {
         stats[group].revenue += r.totalRevenue;
         stats[group].sold += r.totalSold;
@@ -106,9 +109,12 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
 
   const getGroupColor = (group?: string) => {
     switch(group) {
-      case DistributorGroup.GOLD: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case DistributorGroup.SILVER: return 'bg-slate-100 text-slate-800 border-slate-200';
-      case DistributorGroup.NEW: return 'bg-blue-100 text-blue-800 border-blue-200';
+      case DistributorGroup.TaiChinh: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case DistributorGroup.VanPhong: return 'bg-slate-100 text-slate-800 border-slate-200';
+      case DistributorGroup.SuKien: return 'bg-purple-100 text-purple-800 border-purple-200';
+      case DistributorGroup.TruyenThong: return 'bg-green-100 text-green-800 border-green-200';
+      case DistributorGroup.HauCan: return 'bg-red-100 text-red-800 border-red-200';
+      case DistributorGroup.BanBep: return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -142,7 +148,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
 
       {/* GROUP STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[DistributorGroup.GOLD, DistributorGroup.SILVER, DistributorGroup.NEW].map(group => {
+        {[DistributorGroup.TaiChinh, DistributorGroup.VanPhong, DistributorGroup.SuKien, DistributorGroup.TruyenThong, DistributorGroup.HauCan, DistributorGroup.BanBep].map(group => {
           const isActive = filterGroup === group;
           const stat = groupStats[group];
           
@@ -153,8 +159,11 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
               className={`relative p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-1 ${
                 isActive ? 'ring-2 ring-offset-1 ring-blue-500 shadow-md' : 'opacity-80 hover:opacity-100'
               } ${
-                group === DistributorGroup.GOLD ? 'bg-yellow-50 border-yellow-200' :
-                group === DistributorGroup.SILVER ? 'bg-slate-50 border-slate-200' :
+                group === DistributorGroup.TaiChinh ? 'bg-yellow-50 border-yellow-200' :
+                group === DistributorGroup.VanPhong ? 'bg-slate-50 border-slate-200' :
+                group === DistributorGroup.SuKien ? 'bg-purple-50 border-purple-200' :
+                group === DistributorGroup.TruyenThong ? 'bg-green-50 border-green-200' :
+                group === DistributorGroup.HauCan ? 'bg-red-50 border-red-200' :
                 'bg-blue-50 border-blue-200'
               }`}
             >
@@ -162,8 +171,11 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
               
               <div className="flex justify-between items-center mb-3">
                 <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                   group === DistributorGroup.GOLD ? 'bg-yellow-200 text-yellow-800' :
-                   group === DistributorGroup.SILVER ? 'bg-slate-200 text-slate-800' :
+                   group === DistributorGroup.TaiChinh ? 'bg-yellow-200 text-yellow-800' :
+                   group === DistributorGroup.VanPhong ? 'bg-slate-200 text-slate-800' :
+                   group === DistributorGroup.SuKien ? 'bg-purple-200 text-purple-800' :
+                   group === DistributorGroup.TruyenThong ? 'bg-green-200 text-green-800' :
+                   group === DistributorGroup.HauCan ? 'bg-red-200 text-red-800' :
                    'bg-blue-200 text-blue-800'
                 }`}>
                   {group} Partners

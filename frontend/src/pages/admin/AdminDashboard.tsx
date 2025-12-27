@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { WeeklyReport, Order, Product, DistributorGroup, ReportStatus } from '../../types';
-// XÓA: import { AuthService } from '../../services/mockBackend'; -> Không cần nữa
 import { Card, StatCard } from '../../components/Card';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, DollarSign, ClipboardList } from 'lucide-react';
 
 interface AdminDashboardProps {
-  reports: WeeklyReport[]; // Dữ liệu này được truyền từ App.tsx (đã fetch từ API)
+  reports: WeeklyReport[]; 
   orders: Order[];
   products: Product[];
 }
@@ -15,16 +14,10 @@ const LINE_COLORS = ['#2563eb', '#db2777', '#ea580c', '#16a34a', '#7c3aed'];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders }) => {
   const [distributorFilter, setDistributorFilter] = useState<string>('ALL');
-  
-  // Phần AI Analysis tạm thời comment lại chờ tích hợp sau
-  // const [aiAnalysis, setAiAnalysis] = useState<string>('');
-  // const [isLoadingAi, setIsLoadingAi] = useState(false);
 
   // --- LOGIC LỌC DỮ LIỆU ---
   const getFilteredReports = () => {
     if (distributorFilter === 'ALL') return reports;
-    
-    // Backend đã trả về distributorGroup trong từng report, ta lọc trực tiếp
     return reports.filter(r => r.distributorGroup === distributorFilter);
   };
 
@@ -43,19 +36,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
     const groupedByWeek: Record<string, any> = {};
 
     sorted.forEach(r => {
-      // Format ngày cho đẹp (VD: "Dec 25")
+      // Format ngày (VD: "25 Thg 12")
       const dateObj = new Date(r.weekStartDate);
-      const weekLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const weekLabel = dateObj.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }); // Chuyển format ngày sang tiếng Việt
 
       if (!groupedByWeek[weekLabel]) groupedByWeek[weekLabel] = { name: weekLabel };
       
       if (distributorFilter === 'ALL') {
-        // Nếu xem tất cả: Gom nhóm theo Group (GOLD, SILVER...)
-        const group = r.distributorGroup || 'OTHER';
+        const group = r.distributorGroup || 'KHÁC';
         groupedByWeek[weekLabel][group] = (groupedByWeek[weekLabel][group] || 0) + r.totalRevenue;
       } else {
-        // Nếu đang lọc 1 Group cụ thể: Gom nhóm theo Tên người phân phối
-        const distName = r.distributorName || 'Unknown';
+        const distName = r.distributorName || 'Không xác định';
         groupedByWeek[weekLabel][distName] = (groupedByWeek[weekLabel][distName] || 0) + r.totalRevenue;
       }
     });
@@ -64,48 +55,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
 
   const chartData = getChartData();
   
-  // Xác định các đường (Lines) sẽ vẽ trên biểu đồ
+  // Xác định các đường (Lines) sẽ vẽ
   const chartKeys = distributorFilter === 'ALL' 
-    ? Object.values(DistributorGroup) // Vẽ đường cho từng Group
-    : Array.from(new Set(getFilteredReports().map(r => r.distributorName || 'Unknown'))); // Vẽ đường cho từng User
+    ? Object.values(DistributorGroup) 
+    : Array.from(new Set(getFilteredReports().map(r => r.distributorName || 'Không xác định')));
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-slate-200 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Financial Analytics</h2>
-          <p className="text-sm text-slate-500">Overview of network performance</p>
+          {/* Đã dịch tiêu đề */}
+          <h2 className="text-2xl font-bold text-slate-800">Phân Tích Tài Chính</h2>
+          <p className="text-sm text-slate-500">Tổng quan hiệu suất kinh doanh</p>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-slate-500 font-medium">Filter By:</span>
+          <span className="text-sm text-slate-500 font-medium">Lọc theo Ban:</span>
           <select 
             className="p-2 border rounded-md text-sm bg-slate-50 min-w-[200px] outline-none focus:ring-2 focus:ring-blue-500"
             value={distributorFilter}
             onChange={(e) => setDistributorFilter(e.target.value)}
           >
-            <option value="ALL">All Groups (Compare Groups)</option>
-            <option value={DistributorGroup.GOLD}>Gold Partners (Compare Users)</option>
-            <option value={DistributorGroup.SILVER}>Silver Partners (Compare Users)</option>
-            <option value={DistributorGroup.NEW}>New Partners (Compare Users)</option>
+            {/* Đã dịch option mặc định */}
+            <option value="ALL">Tất cả (So sánh các Ban)</option>
+            <option value={DistributorGroup.TaiChinh}>Tài Chính</option>
+            <option value={DistributorGroup.VanPhong}>Văn Phòng</option>
+            <option value={DistributorGroup.SuKien}>Sự Kiện</option>
+            <option value={DistributorGroup.TruyenThong}>Truyền Thông</option>
+            <option value={DistributorGroup.HauCan}>Hậu Cần</option>
+            <option value={DistributorGroup.BanBep}>Ban Bếp</option>
           </select>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Đã dịch Label các thẻ chỉ số */}
         <StatCard 
-            label="Total Revenue" 
+            label="Tổng Doanh Thu" 
             value={`$${totalRevenue.toLocaleString()}`} 
             icon={<DollarSign className="w-6 h-6 text-emerald-600" />} 
             color="text-emerald-600" 
         />
         <StatCard 
-            label="Items Sold" 
+            label="Sản Phẩm Đã Bán" 
             value={totalSold} 
             icon={<TrendingUp className="w-6 h-6 text-blue-600" />} 
             color="text-blue-600" 
         />
         <StatCard 
-            label="Pending Reports" 
+            label="Báo Cáo Chờ Duyệt" 
             value={pendingReports} 
             icon={<ClipboardList className="w-6 h-6 text-amber-600" />} 
             color="text-amber-600" 
@@ -113,7 +110,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
       </div>
 
       {chartData.length > 0 ? (
-        <Card title={distributorFilter === 'ALL' ? "Revenue Trends by Group" : "Distributor Performance Breakdown"}>
+        <Card title={distributorFilter === 'ALL' ? "Xu Hướng Doanh Thu Theo Ban" : "Chi Tiết Hiệu Suất Thành Viên"}>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -122,7 +119,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
                   <YAxis tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} tickFormatter={(value) => `$${value/1000}k`} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
+                    // Dịch tooltip: Revenue -> Doanh thu
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, 'Doanh thu']}
                   />
                   <Legend iconType="circle" />
                   {chartKeys.map((key, index) => (
@@ -142,12 +140,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
         </Card>
       ) : (
         <div className="p-10 text-center bg-white rounded-lg border border-slate-200">
-            <p className="text-slate-500">No data available for the selected filter.</p>
+            <p className="text-slate-500">Chưa có dữ liệu cho bộ lọc này.</p>
         </div>
       )}
-
-      {/* Placeholder cho phần AI Analysis */}
-      {/* <Card title="AI Business Intelligence" className="border-purple-200 bg-purple-50"> ... </Card> */}
     </div>
   );
 };

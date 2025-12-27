@@ -43,7 +43,7 @@ export const DistributorDashboard: React.FC<DistributorDashboardProps> = ({ myOr
 
   const filteredReports = selectedWeek === 'CURRENT'
     ? myReports
-    : myReports.filter(r => r.weekStartDate.startsWith(selectedWeek)); // startsWith an toàn hơn so sánh ===
+    : myReports.filter(r => r.weekStartDate.startsWith(selectedWeek));
 
   const totalOrdered = filteredOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalRevenue = filteredReports.filter(r => r.status === ReportStatus.APPROVED).reduce((sum, r) => sum + r.totalRevenue, 0);
@@ -52,7 +52,7 @@ export const DistributorDashboard: React.FC<DistributorDashboardProps> = ({ myOr
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-         <h2 className="text-2xl font-bold text-slate-800">Dashboard</h2>
+         <h2 className="text-2xl font-bold text-slate-800">Bảng Điều Khiển</h2>
          <div className="flex items-center gap-2">
            <Calendar className="w-4 h-4 text-slate-500" />
            <select 
@@ -60,18 +60,34 @@ export const DistributorDashboard: React.FC<DistributorDashboardProps> = ({ myOr
              value={selectedWeek}
              onChange={(e) => setSelectedWeek(e.target.value)}
            >
-             <option value="CURRENT">All Time Overview</option>
+             <option value="CURRENT">Tất cả (Toàn thời gian)</option>
              {weeks.map((w, idx) => (
-               <option key={idx} value={w}>Week of {new Date(w).toLocaleDateString()}</option>
+               <option key={idx} value={w}>
+                 Tuần ngày {new Date(w).toLocaleDateString('vi-VN')}
+               </option>
              ))}
            </select>
          </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <StatCard label="Purchased Stock (Cost)" value={`$${totalOrdered.toLocaleString()}`} color="text-blue-600" />
-         <StatCard label="Revenue (Approved)" value={`$${totalRevenue.toLocaleString()}`} color="text-emerald-600" />
-         <StatCard label="Units Sold" value={itemsSold} icon={<Package className="w-6 h-6" />} color="text-purple-600" />
+         {/* Đã dịch Label các thẻ chỉ số */}
+         <StatCard 
+            label="Chi Phí Nhập Hàng" 
+            value={`$${totalOrdered.toLocaleString()}`} 
+            color="text-blue-600" 
+         />
+         <StatCard 
+            label="Doanh Thu (Đã duyệt)" 
+            value={`$${totalRevenue.toLocaleString()}`} 
+            color="text-emerald-600" 
+         />
+         <StatCard 
+            label="Sản Phẩm Đã Bán" 
+            value={itemsSold} 
+            icon={<Package className="w-6 h-6" />} 
+            color="text-purple-600" 
+         />
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
@@ -79,15 +95,15 @@ export const DistributorDashboard: React.FC<DistributorDashboardProps> = ({ myOr
            <div className="absolute top-0 right-0 bg-blue-50 p-4 rounded-bl-full transition transform group-hover:scale-110">
               <ShoppingCart className="w-8 h-8 text-blue-600"/>
            </div>
-           <h3 className="text-lg font-bold mt-2 text-slate-800">Place New Order</h3>
-           <p className="text-sm text-slate-500 mt-1">Restock your inventory for the coming week.</p>
+           <h3 className="text-lg font-bold mt-2 text-slate-800">Đặt Hàng Mới</h3>
+           <p className="text-sm text-slate-500 mt-1">Nhập thêm hàng hóa cho tuần tiếp theo.</p>
          </button>
          <button onClick={() => onNavigate('report')} className="group p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-emerald-400 hover:shadow-md transition text-left relative overflow-hidden">
            <div className="absolute top-0 right-0 bg-emerald-50 p-4 rounded-bl-full transition transform group-hover:scale-110">
               <FileBarChart className="w-8 h-8 text-emerald-600"/>
            </div>
-           <h3 className="text-lg font-bold mt-2 text-slate-800">Weekly Report</h3>
-           <p className="text-sm text-slate-500 mt-1">Submit sales data & check remaining stock.</p>
+           <h3 className="text-lg font-bold mt-2 text-slate-800">Báo Cáo Tuần</h3>
+           <p className="text-sm text-slate-500 mt-1">Gửi số liệu bán hàng & kiểm tra tồn kho.</p>
          </button>
       </div>
     </div>

@@ -40,7 +40,7 @@ export const UserManager: React.FC<UserManagerProps> = ({
     username: '',
     // Mặc định tạo là DISTRIBUTOR (Nhà phân phối)
     role: UserRole.DISTRIBUTOR, 
-    group: DistributorGroup.NEW 
+    group: DistributorGroup.TaiChinh 
   });
 
   // --- CHECK QUYỀN ---
@@ -51,9 +51,13 @@ export const UserManager: React.FC<UserManagerProps> = ({
   const stats = useMemo(() => {
     return {
       total: users.length,
-      gold: users.filter(u => u.group === DistributorGroup.GOLD).length,
-      silver: users.filter(u => u.group === DistributorGroup.SILVER).length,
-      new: users.filter(u => u.group === DistributorGroup.NEW).length,
+      taichinh: users.filter(u => u.group === DistributorGroup.TaiChinh).length,
+      vanphong: users.filter(u => u.group === DistributorGroup.VanPhong).length,
+      sukien: users.filter(u => u.group === DistributorGroup.SuKien).length,
+      truyenthong: users.filter(u => u.group === DistributorGroup.TruyenThong).length,
+      haucan: users.filter(u => u.group === DistributorGroup.HauCan).length,
+      banbep: users.filter(u => u.group === DistributorGroup.BanBep).length,
+
     };
   }, [users]);
 
@@ -93,7 +97,7 @@ export const UserManager: React.FC<UserManagerProps> = ({
       name: '', 
       username: '', 
       role: UserRole.DISTRIBUTOR, 
-      group: DistributorGroup.NEW 
+      group: DistributorGroup.TaiChinh 
     });
     setIsAddModalOpen(false);
   };
@@ -122,12 +126,18 @@ export const UserManager: React.FC<UserManagerProps> = ({
     if (!group) return <span className="text-slate-400 text-xs italic">N/A</span>; // Trường hợp Admin
 
     switch(group) {
-      case DistributorGroup.GOLD: 
-        return <span className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200"><Award className="w-3 h-3"/> Gold</span>;
-      case DistributorGroup.SILVER: 
-        return <span className="flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-xs font-bold border border-slate-200"><Award className="w-3 h-3"/> Silver</span>;
-      case DistributorGroup.NEW: 
-        return <span className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold border border-blue-200"><UserIcon className="w-3 h-3"/> New</span>;
+      case DistributorGroup.TaiChinh: 
+        return <span className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-bold border border-yellow-200"><Award className="w-3 h-3"/> Tai Chinh</span>;
+      case DistributorGroup.VanPhong: 
+        return <span className="flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded text-xs font-bold border border-slate-200"><Award className="w-3 h-3"/> Van Phong</span>;
+      case DistributorGroup.SuKien: 
+        return <span className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold border border-blue-200"><UserIcon className="w-3 h-3"/> Su Kien</span>;
+      case DistributorGroup.TruyenThong: 
+        return <span className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold border border-green-200"><UserIcon className="w-3 h-3"/> Truyen Thong</span>;
+      case DistributorGroup.HauCan: 
+        return <span className="flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold border border-red-200"><UserIcon className="w-3 h-3"/> Hau Can</span>;
+      case DistributorGroup.BanBep: 
+        return <span className="flex items-center gap-1 bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs font-bold border border-purple-200"><UserIcon className="w-3 h-3"/> Ban Bep</span>;
       default: 
         return <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">Unknown</span>;
     }
@@ -157,18 +167,32 @@ export const UserManager: React.FC<UserManagerProps> = ({
              <div className="p-3 bg-slate-100 rounded-full text-slate-600"><Users className="w-5 h-5"/></div>
           </div>
           <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 shadow-sm flex items-center justify-between">
-             <div><p className="text-xs text-yellow-700 font-bold uppercase">Gold Partners</p><p className="text-2xl font-bold text-yellow-800">{stats.gold}</p></div>
+             <div><p className="text-xs text-yellow-700 font-bold uppercase">Tài Chính</p><p className="text-2xl font-bold text-yellow-800">{stats.taichinh}</p></div>
              <div className="p-3 bg-white rounded-full text-yellow-600"><Award className="w-5 h-5"/></div>
           </div>
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-             <div><p className="text-xs text-slate-600 font-bold uppercase">Silver Partners</p><p className="text-2xl font-bold text-slate-800">{stats.silver}</p></div>
+             <div><p className="text-xs text-slate-600 font-bold uppercase">Văn Phòng</p><p className="text-2xl font-bold text-slate-800">{stats.vanphong}</p></div>
              <div className="p-3 bg-white rounded-full text-slate-500"><Award className="w-5 h-5"/></div>
           </div>
           <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm flex items-center justify-between">
-             <div><p className="text-xs text-blue-700 font-bold uppercase">New Partners</p><p className="text-2xl font-bold text-blue-800">{stats.new}</p></div>
+             <div><p className="text-xs text-blue-700 font-bold uppercase">Hậu Cần</p><p className="text-2xl font-bold text-blue-800">{stats.haucan}</p></div>
              <div className="p-3 bg-white rounded-full text-blue-600"><UserIcon className="w-5 h-5"/></div>
+            
+          </div>
+          <div className="bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm flex items-center justify-between">
+             <div><p className="text-xs text-red-700 font-bold uppercase">Sự Kiện</p><p className="text-2xl font-bold text-red-800">{stats.sukien}</p></div>
+             <div className="p-3 bg-white rounded-full text-red-600"><UserIcon className="w-5 h-5"/></div>
+          </div>
+          <div className="bg-green-50 p-4 rounded-xl border border-green-200 shadow-sm flex items-center justify-between">
+             <div><p className="text-xs text-green-700 font-bold uppercase">Truyền Thông</p><p className="text-2xl font-bold text-green-800">{stats.truyenthong}</p></div>
+             <div className="p-3 bg-white rounded-full text-green-600"><UserIcon className="w-5 h-5"/></div>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 shadow-sm flex items-center justify-between">
+             <div><p className="text-xs text-purple-700 font-bold uppercase">Bàn Bếp</p><p className="text-2xl font-bold text-purple-800">{stats.banbep}</p></div>
+             <div className="p-3 bg-white rounded-full text-purple-600"><UserIcon className="w-5 h-5"/></div>
           </div>
       </div>
+
 
       {/* FILTER BAR */}
       <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -190,9 +214,12 @@ export const UserManager: React.FC<UserManagerProps> = ({
             onChange={(e) => setFilterGroup(e.target.value)}
           >
             <option value="ALL">Tất cả nhóm</option>
-            <option value={DistributorGroup.GOLD}>Gold Partners</option>
-            <option value={DistributorGroup.SILVER}>Silver Partners</option>
-            <option value={DistributorGroup.NEW}>New Partners</option>
+            <option value={DistributorGroup.TaiChinh}>Tài Chính</option>
+            <option value={DistributorGroup.VanPhong}>Văn Phòng</option>
+            <option value={DistributorGroup.HauCan}>Hậu Cần</option>
+            <option value={DistributorGroup.SuKien}>Sự Kiện</option>
+            <option value={DistributorGroup.TruyenThong}>Truyền Thông</option>
+            <option value={DistributorGroup.BanBep}>Bàn Bếp</option>
           </select>
         </div>
       </div>
@@ -316,9 +343,12 @@ export const UserManager: React.FC<UserManagerProps> = ({
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     value={newUserForm.group}
                     onChange={e => setNewUserForm({...newUserForm, group: e.target.value as DistributorGroup})}                  >
-                    <option value={DistributorGroup.NEW}>New</option>
-                    <option value={DistributorGroup.SILVER}>Silver</option>
-                    <option value={DistributorGroup.GOLD}>Gold</option>
+                    <option value={DistributorGroup.TaiChinh}>Tài Chính</option>
+                    <option value={DistributorGroup.VanPhong}>Văn Phòng</option>
+                    <option value={DistributorGroup.HauCan}>Hậu Cần</option>
+                    <option value={DistributorGroup.SuKien}>Sự Kiện</option>
+                    <option value={DistributorGroup.TruyenThong}>Truyền Thông</option>
+                    <option value={DistributorGroup.BanBep}>Bàn Bếp</option>
                   </select>
                 </div>
               </div>

@@ -7,12 +7,12 @@ export enum UserRole {
 }
 
 export enum DistributorGroup {
-  TaiChinh = 'TaiChinh',   // Thân thiết
-  VanPhong = 'VanPhong', // Bình thường
-  SuKien = 'SuKien',
-  TruyenThong = 'TruyenThong',
-  HauCan = 'HauCan',
-  BanBep = 'BanBep'  // Mới
+  TaiChinh = 'Tài Chính',   // Thân thiết
+  VanPhong = 'Văn Phòng', // Bình thường
+  SuKien = 'Sự Kiện',
+  TruyenThong = 'Truyền Thông',
+  HauCan = 'Hậu Cần',
+  BanBep = 'Bàn Bếp'  // Mới
 }
 
 export enum OrderStatus {
