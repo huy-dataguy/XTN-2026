@@ -16,7 +16,7 @@ export const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.DISTRIBUTOR);
-  const [group, setGroup] = useState<DistributorGroup>(DistributorGroup.NEW);
+  const [group, setGroup] = useState<DistributorGroup>(DistributorGroup.VanPhong);
   
   const navigate = useNavigate();
 
@@ -159,9 +159,12 @@ export const Register: React.FC = () => {
                     onChange={(e) => setGroup(e.target.value as DistributorGroup)}
                     className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                 >
-                    <option value={DistributorGroup.NEW}>New (Mới)</option>
-                    <option value={DistributorGroup.SILVER}>Silver (Bạc)</option>
-                    <option value={DistributorGroup.GOLD}>Gold (Vàng)</option>
+                    <option value={DistributorGroup.TaiChinh}>Tài Chính</option>
+                    <option value={DistributorGroup.VanPhong}>Văn Phòng</option>
+                    <option value={DistributorGroup.SuKien}>Sự Kiện</option>
+                    <option value={DistributorGroup.TruyenThong}>Truyền Thông</option>
+                    <option value={DistributorGroup.HauCan}>Hậu Cần</option>
+                    <option value={DistributorGroup.BanBep}>Ban Bếp</option>
                 </select>
                 </div>
             </div>

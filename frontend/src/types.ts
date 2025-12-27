@@ -7,9 +7,12 @@ export enum UserRole {
 }
 
 export enum DistributorGroup {
-  GOLD = 'GOLD',   // Thân thiết
-  SILVER = 'SILVER', // Bình thường
-  NEW = 'NEW'      // Mới
+  TaiChinh = 'TaiChinh',   // Thân thiết
+  VanPhong = 'VanPhong', // Bình thường
+  SuKien = 'SuKien',
+  TruyenThong = 'TruyenThong',
+  HauCan = 'HauCan',
+  BanBep = 'BanBep'  // Mới
 }
 
 export enum OrderStatus {
