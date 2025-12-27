@@ -1,54 +1,212 @@
-import React, { useState } from 'react';
-import { WeeklyReport, ReportStatus } from '../../types';
-import { reportService } from '../../services/reportService'; // <--- Import Service thật
+import React, { useState, useMemo } from 'react';
+import { WeeklyReport, ReportStatus, DistributorGroup, User, Order } from '../../types'; // Thêm User
+import { reportService } from '../../services/reportService';
 import { Card } from '../../components/Card';
-import { Check, X, Loader2 } from 'lucide-react'; // Thêm Loader
+import { Check, X, Loader2, Calendar, Filter, AlertCircle, User as UserIcon } from 'lucide-react'; // Thêm icon
 
 interface ReportManagerProps {
   reports: WeeklyReport[];
+  distributors: User[]; // <--- BẮT BUỘC PHẢI CÓ để biết tổng số nhân viên
+  orders: Order[];      // <--- THÊM DÒNG NÀY ĐỂ HẾT LỖI
   onRefresh: () => void;
 }
 
-export const ReportManager: React.FC<ReportManagerProps> = ({ reports, onRefresh }) => {
-  // State để biết đang xử lý report nào (hiện loading xoay vòng)
+export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distributors, orders, onRefresh }) => {
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [filterGroup, setFilterGroup] = useState<string>('ALL');
 
+  // --- LOGIC NGÀY THÁNG ---
+  const getCurrentWeekStart = () => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  };
+
+  const [selectedWeek, setSelectedWeek] = useState<string>(getCurrentWeekStart());
+
+  const availableWeeks = useMemo(() => {
+    const weeks = new Set(reports.map(r => r.weekStartDate));
+    weeks.add(getCurrentWeekStart());
+    return Array.from(weeks).sort().reverse();
+  }, [reports]);
+
+  // --- LỌC DỮ LIỆU ---
+  
+  // 1. Lọc báo cáo theo Tuần
+  const reportsInWeek = useMemo(() => {
+    return reports.filter(r => r.weekStartDate.startsWith(selectedWeek));
+  }, [reports, selectedWeek]);
+
+  // 2. Tính toán Thống kê Group
+  const groupStats = useMemo(() => {
+    const stats = {
+      [DistributorGroup.GOLD]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.SILVER]: { revenue: 0, sold: 0, count: 0 },
+      [DistributorGroup.NEW]: { revenue: 0, sold: 0, count: 0 },
+    };
+
+    reportsInWeek.forEach(r => {
+      const group = r.distributorGroup || DistributorGroup.NEW;
+      if (stats[group]) {
+        stats[group].revenue += r.totalRevenue;
+        stats[group].sold += r.totalSold;
+        stats[group].count += 1;
+      }
+    });
+
+    return stats;
+  }, [reportsInWeek]);
+
+  // 3. Lọc danh sách báo cáo hiển thị
+  const displayedReports = useMemo(() => {
+    let list = reportsInWeek;
+    if (filterGroup !== 'ALL') {
+      list = list.filter(r => r.distributorGroup === filterGroup);
+    }
+    return list.sort((a, b) => {
+      if (a.status === ReportStatus.PENDING && b.status !== ReportStatus.PENDING) return -1;
+      if (a.status !== ReportStatus.PENDING && b.status === ReportStatus.PENDING) return 1;
+      return 0;
+    });
+  }, [reportsInWeek, filterGroup]);
+
+  // --- LOGIC TÍNH NGƯỜI CHƯA BÁO CÁO (MỚI THÊM) ---
+  const missingReporters = useMemo(() => {
+    // Lấy ID những người đã nộp
+    const submittedIds = new Set(reportsInWeek.map(r => r.distributorId));
+    
+    // Lọc ra những người chưa nộp
+    return distributors.filter(u => {
+      // Bỏ qua nếu đã nộp
+      if (submittedIds.has(u.id)) return false;
+      // Bỏ qua nếu không thuộc Group đang lọc
+      if (filterGroup !== 'ALL' && u.group !== filterGroup) return false;
+      return true;
+    });
+  }, [distributors, reportsInWeek, filterGroup]);
+
+
+  // --- XỬ LÝ API ---
   const handleUpdateStatus = async (id: string, status: ReportStatus) => {
-    // Xác nhận trước khi reject
     if (status === ReportStatus.REJECTED && !confirm('Are you sure you want to reject this report?')) {
       return;
     }
-
-    setProcessingId(id); // Bật loading cho card này
+    setProcessingId(id);
     try {
       await reportService.updateStatus(id, status);
-      onRefresh(); // Refresh lại dữ liệu từ App.tsx
+      onRefresh();
     } catch (error: any) {
       alert(error.response?.data?.msg || 'Failed to update report status');
     } finally {
-      setProcessingId(null); // Tắt loading
+      setProcessingId(null);
     }
   };
 
-  // Sắp xếp: PENDING lên đầu, sau đó theo ngày
-  const sortedReports = [...reports].sort((a, b) => {
-    if (a.status === ReportStatus.PENDING && b.status !== ReportStatus.PENDING) return -1;
-    if (a.status !== ReportStatus.PENDING && b.status === ReportStatus.PENDING) return 1;
-    return new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime();
-  });
+  const getGroupColor = (group?: string) => {
+    switch(group) {
+      case DistributorGroup.GOLD: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case DistributorGroup.SILVER: return 'bg-slate-100 text-slate-800 border-slate-200';
+      case DistributorGroup.NEW: return 'bg-blue-100 text-blue-800 border-blue-200';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-800">Distributor Reports Review</h2>
       
-      <div className="space-y-4">
-        {reports.length === 0 && (
-          <div className="text-center py-8 text-slate-500 bg-white rounded-lg border border-dashed">
-            No reports found.
+      {/* HEADER & DATE FILTER */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Weekly Performance Review</h2>
+          <p className="text-sm text-slate-500">Select a week to review distributor performance.</p>
+        </div>
+        
+        <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-200">
+          <Calendar className="w-5 h-5 text-slate-500" />
+          <span className="text-sm font-medium text-slate-700">Week of:</span>
+          <select 
+            value={selectedWeek}
+            onChange={(e) => setSelectedWeek(e.target.value)}
+            className="bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none font-medium min-w-[140px]"
+          >
+            {availableWeeks.map(week => (
+              <option key={week} value={week}>
+                {new Date(week).toLocaleDateString('en-GB')} {week === getCurrentWeekStart() ? '(Current)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* GROUP STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[DistributorGroup.GOLD, DistributorGroup.SILVER, DistributorGroup.NEW].map(group => {
+          const isActive = filterGroup === group;
+          const stat = groupStats[group];
+          
+          return (
+            <div 
+              key={group} 
+              onClick={() => setFilterGroup(isActive ? 'ALL' : group)}
+              className={`relative p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-1 ${
+                isActive ? 'ring-2 ring-offset-1 ring-blue-500 shadow-md' : 'opacity-80 hover:opacity-100'
+              } ${
+                group === DistributorGroup.GOLD ? 'bg-yellow-50 border-yellow-200' :
+                group === DistributorGroup.SILVER ? 'bg-slate-50 border-slate-200' :
+                'bg-blue-50 border-blue-200'
+              }`}
+            >
+              {isActive && <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>}
+              
+              <div className="flex justify-between items-center mb-3">
+                <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
+                   group === DistributorGroup.GOLD ? 'bg-yellow-200 text-yellow-800' :
+                   group === DistributorGroup.SILVER ? 'bg-slate-200 text-slate-800' :
+                   'bg-blue-200 text-blue-800'
+                }`}>
+                  {group} Partners
+                </span>
+                <span className="text-xs text-slate-500 font-bold">{stat.count} Reports</span>
+              </div>
+              
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Revenue</p>
+                  <p className="text-lg font-bold text-slate-800">${stat.revenue.toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Sold</p>
+                  <p className="text-lg font-bold text-slate-800">{stat.sold}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* DANH SÁCH BÁO CÁO (ĐÃ CÓ) */}
+      <div className="space-y-4 pt-2">
+        <div className="flex justify-between items-center px-1">
+          <h3 className="font-bold text-slate-700 flex items-center gap-2">
+            <Filter className="w-4 h-4" /> 
+            Submitted Reports ({displayedReports.length})
+            {filterGroup !== 'ALL' && <span className="text-sm font-normal text-slate-500 ml-2 bg-slate-100 px-2 rounded-full">Filter: {filterGroup}</span>}
+          </h3>
+          {filterGroup !== 'ALL' && (
+            <button onClick={() => setFilterGroup('ALL')} className="text-xs text-blue-600 hover:underline">Clear Filter</button>
+          )}
+        </div>
+
+        {displayedReports.length === 0 && (
+          <div className="text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed flex flex-col items-center">
+            <Calendar className="w-10 h-10 mb-2 opacity-20" />
+            <p>No reports found for this filter.</p>
           </div>
         )}
         
-        {sortedReports.map(report => (
+        {displayedReports.map(report => (
           <Card 
             key={report.id} 
             className={`flex flex-col gap-4 border-l-4 transition-all hover:shadow-md ${
@@ -56,59 +214,71 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, onRefresh
               report.status === ReportStatus.APPROVED ? 'border-l-green-500' : 'border-l-red-500'
             }`}
           >
-            <div className="flex justify-between items-start">
+            {/* Header Card */}
+            <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
                <div>
-                 <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2 mb-1">
                    <h3 className="font-bold text-lg text-slate-800">{report.distributorName || 'Unknown User'}</h3>
-                   <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 font-medium">
+                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${getGroupColor(report.distributorGroup)}`}>
                      {report.distributorGroup || 'N/A'}
                    </span>
-                   <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                     report.status === ReportStatus.PENDING ? 'bg-yellow-100 text-yellow-700' :
-                     report.status === ReportStatus.APPROVED ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                   }`}>
-                     {report.status}
-                   </span>
                  </div>
-                 <p className="text-sm text-slate-500">Week of: {new Date(report.weekStartDate).toLocaleDateString()}</p>
+                 <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <span className={`font-bold uppercase text-xs px-2 py-0.5 rounded ${
+                      report.status === ReportStatus.PENDING ? 'bg-yellow-100 text-yellow-700' :
+                      report.status === ReportStatus.APPROVED ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {report.status}
+                    </span>
+                    <span>• {new Date(report.weekStartDate).toLocaleDateString('en-GB')}</span>
+                 </div>
                </div>
-               <div className="text-right">
-                 <p className="text-2xl font-bold text-emerald-600">${report.totalRevenue.toLocaleString()}</p>
-                 <p className="text-xs text-slate-400 font-medium uppercase">Total Revenue</p>
+               
+               {/* Summary Stats in Card */}
+               <div className="flex gap-6 text-right bg-slate-50 p-2 rounded-lg border border-slate-100">
+                 <div>
+                   <p className="text-xl font-bold text-emerald-600">${report.totalRevenue.toLocaleString()}</p>
+                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Revenue</p>
+                 </div>
+                 <div className="border-l border-slate-200 pl-4">
+                   <p className="text-xl font-bold text-blue-600">{report.totalSold}</p>
+                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Items Sold</p>
+                 </div>
                </div>
             </div>
             
-            <div className="bg-slate-50 p-4 rounded-lg text-sm border border-slate-100">
+            {/* Details Table */}
+            <div className="bg-white rounded-lg text-sm border border-slate-200 overflow-hidden">
                <div className="overflow-x-auto">
                  <table className="w-full text-left">
-                    <thead>
-                       <tr className="text-slate-500 border-b border-slate-200">
-                         <th className="pb-2 font-medium">Product</th>
-                         <th className="pb-2 text-right font-medium">Rcvd</th>
-                         <th className="pb-2 text-right font-medium">Sold</th>
-                         <th className="pb-2 text-right font-medium">Dmg</th>
-                         <th className="pb-2 text-right font-medium">Stock</th>
-                         <th className="pb-2 text-right font-medium">Revenue</th>
+                    <thead className="bg-slate-50">
+                       <tr className="text-slate-500">
+                         <th className="px-4 py-2 font-medium">Product</th>
+                         <th className="px-4 py-2 text-right font-medium">Recv</th>
+                         <th className="px-4 py-2 text-right font-medium">Sold</th>
+                         <th className="px-4 py-2 text-right font-medium">Dmg</th>
+                         <th className="px-4 py-2 text-right font-medium">Rem</th>
+                         <th className="px-4 py-2 text-right font-medium">Rev</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {report.details.map((d, idx) => (
                         <tr key={idx}>
-                          <td className="py-2 font-medium text-slate-700">{d.productName}</td>
-                          <td className="py-2 text-right text-slate-500">{d.quantityReceived}</td>
-                          <td className="py-2 text-right font-medium">{d.quantitySold}</td>
-                          <td className="py-2 text-right text-red-500">{d.quantityDamaged}</td>
-                          <td className="py-2 text-right text-blue-600 font-medium">{d.remainingStock}</td>
-                          <td className="py-2 text-right font-medium text-emerald-600">${d.revenue.toLocaleString()}</td>
+                          <td className="px-4 py-2 font-medium text-slate-700">{d.productName}</td>
+                          <td className="px-4 py-2 text-right text-slate-400">{d.quantityReceived}</td>
+                          <td className="px-4 py-2 text-right font-bold text-slate-700">{d.quantitySold}</td>
+                          <td className="px-4 py-2 text-right text-red-500">{d.quantityDamaged > 0 ? d.quantityDamaged : '-'}</td>
+                          <td className="px-4 py-2 text-right text-blue-600 font-medium">{d.remainingStock}</td>
+                          <td className="px-4 py-2 text-right font-medium text-emerald-600">${d.revenue.toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
                  </table>
                </div>
                {report.notes && (
-                <div className="mt-4 pt-3 border-t border-slate-200">
-                  <span className="font-bold text-xs uppercase text-slate-500 block mb-1">Distributor Notes:</span>
-                  <p className="italic text-slate-600 bg-white p-2 rounded border border-slate-100">"{report.notes}"</p>
+                <div className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+                  <span className="font-bold text-xs uppercase text-slate-500 mt-0.5">Note:</span>
+                  <p className="italic text-slate-600 text-sm">"{report.notes}"</p>
                 </div>
               )}
             </div>
@@ -118,7 +288,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, onRefresh
                  <button 
                     onClick={() => handleUpdateStatus(report.id, ReportStatus.REJECTED)} 
                     disabled={processingId !== null}
-                    className="flex items-center px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                    className="flex items-center px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 text-sm font-medium"
                  >
                    {processingId === report.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <X className="w-4 h-4 mr-2"/>} 
                    Reject
@@ -126,7 +296,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, onRefresh
                  <button 
                     onClick={() => handleUpdateStatus(report.id, ReportStatus.APPROVED)} 
                     disabled={processingId !== null}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition shadow-sm disabled:opacity-50"
+                    className="flex items-center px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition shadow-sm disabled:opacity-50 text-sm font-medium"
                  >
                    {processingId === report.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Check className="w-4 h-4 mr-2"/>}
                    Approve & Sync
@@ -136,6 +306,36 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, onRefresh
           </Card>
         ))}
       </div>
+
+      {/* --- PHẦN MỚI THÊM: NGƯỜI CHƯA BÁO CÁO --- */}
+      {missingReporters.length > 0 && (
+        <div className="mt-8 pt-8 border-t-2 border-slate-200">
+           <h3 className="text-lg font-bold text-red-600 flex items-center mb-4">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              Missing Reports ({missingReporters.length})
+           </h3>
+           <p className="text-sm text-slate-500 mb-4">The following distributors have not submitted a report for the week of <span className="font-bold">{new Date(selectedWeek).toLocaleDateString('en-GB')}</span>.</p>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {missingReporters.map(user => (
+                <div key={user.id} className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white border border-red-100 flex items-center justify-center text-red-500">
+                         <UserIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                         <p className="font-bold text-slate-800">{user.name}</p>
+                         <p className="text-xs text-red-600 font-medium uppercase">{user.group} Partner</p>
+                      </div>
+                   </div>
+                   <div className="text-right">
+                      <span className="text-xs font-bold text-red-500 bg-white px-2 py-1 rounded border border-red-100">Not Submitted</span>
+                   </div>
+                </div>
+              ))}
+           </div>
+        </div>
+      )}
     </div>
   );
 };
