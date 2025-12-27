@@ -12,28 +12,38 @@ interface DistributorDashboardProps {
 export const DistributorDashboard: React.FC<DistributorDashboardProps> = ({ myOrders, myReports, onNavigate }) => {
   const [selectedWeek, setSelectedWeek] = useState<string>('CURRENT');
 
+  // Tính toán danh sách các tuần có dữ liệu
   const weeks = Array.from(new Set([
     ...myOrders.map(o => {
+        // Chuyển đổi an toàn từ ISO String của Mongo
         const d = new Date(o.createdAt);
+        if (isNaN(d.getTime())) return ''; // Bỏ qua nếu ngày lỗi
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
         return new Date(d.setDate(diff)).toISOString().split('T')[0];
     }),
-    ...myReports.map(r => r.weekStartDate)
-  ])).sort().reverse();
+    ...myReports.map(r => r.weekStartDate) // Backend đã lưu đúng format YYYY-MM-DDT...
+  ]))
+  .filter(w => w !== '') // Lọc bỏ ngày lỗi
+  .map(w => w.split('T')[0]) // Đảm bảo chỉ lấy phần ngày YYYY-MM-DD
+  .sort().reverse();
+
+  // Helper tính tuần
+  const getWeekStart = (dateStr: string) => {
+     const d = new Date(dateStr);
+     if (isNaN(d.getTime())) return 'INVALID';
+     const day = d.getDay();
+     const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+     return new Date(d.setDate(diff)).toISOString().split('T')[0];
+  }
 
   const filteredOrders = selectedWeek === 'CURRENT' 
     ? myOrders 
-    : myOrders.filter(o => {
-        const d = new Date(o.createdAt);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
-        return new Date(d.setDate(diff)).toISOString().split('T')[0] === selectedWeek;
-    });
+    : myOrders.filter(o => getWeekStart(o.createdAt) === selectedWeek);
 
   const filteredReports = selectedWeek === 'CURRENT'
     ? myReports
-    : myReports.filter(r => r.weekStartDate === selectedWeek);
+    : myReports.filter(r => r.weekStartDate.startsWith(selectedWeek)); // startsWith an toàn hơn so sánh ===
 
   const totalOrdered = filteredOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalRevenue = filteredReports.filter(r => r.status === ReportStatus.APPROVED).reduce((sum, r) => sum + r.totalRevenue, 0);
@@ -46,13 +56,13 @@ export const DistributorDashboard: React.FC<DistributorDashboardProps> = ({ myOr
          <div className="flex items-center gap-2">
            <Calendar className="w-4 h-4 text-slate-500" />
            <select 
-             className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+             className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none"
              value={selectedWeek}
              onChange={(e) => setSelectedWeek(e.target.value)}
            >
-             <option value="CURRENT">All Time</option>
-             {weeks.map(w => (
-               <option key={w} value={w}>Week of {w}</option>
+             <option value="CURRENT">All Time Overview</option>
+             {weeks.map((w, idx) => (
+               <option key={idx} value={w}>Week of {new Date(w).toLocaleDateString()}</option>
              ))}
            </select>
          </div>
@@ -65,18 +75,18 @@ export const DistributorDashboard: React.FC<DistributorDashboardProps> = ({ myOr
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-         <button onClick={() => onNavigate('order')} className="group p-6 bg-white rounded-xl shadow-sm border hover:border-blue-400 hover:shadow-md transition text-left relative overflow-hidden">
-           <div className="absolute top-0 right-0 bg-blue-50 p-4 rounded-bl-full transition group-hover:scale-110">
+         <button onClick={() => onNavigate('order')} className="group p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-blue-400 hover:shadow-md transition text-left relative overflow-hidden">
+           <div className="absolute top-0 right-0 bg-blue-50 p-4 rounded-bl-full transition transform group-hover:scale-110">
               <ShoppingCart className="w-8 h-8 text-blue-600"/>
            </div>
-           <h3 className="text-lg font-bold mt-2">Place New Order</h3>
+           <h3 className="text-lg font-bold mt-2 text-slate-800">Place New Order</h3>
            <p className="text-sm text-slate-500 mt-1">Restock your inventory for the coming week.</p>
          </button>
-         <button onClick={() => onNavigate('report')} className="group p-6 bg-white rounded-xl shadow-sm border hover:border-emerald-400 hover:shadow-md transition text-left relative overflow-hidden">
-           <div className="absolute top-0 right-0 bg-emerald-50 p-4 rounded-bl-full transition group-hover:scale-110">
+         <button onClick={() => onNavigate('report')} className="group p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-emerald-400 hover:shadow-md transition text-left relative overflow-hidden">
+           <div className="absolute top-0 right-0 bg-emerald-50 p-4 rounded-bl-full transition transform group-hover:scale-110">
               <FileBarChart className="w-8 h-8 text-emerald-600"/>
            </div>
-           <h3 className="text-lg font-bold mt-2">Weekly Report</h3>
+           <h3 className="text-lg font-bold mt-2 text-slate-800">Weekly Report</h3>
            <p className="text-sm text-slate-500 mt-1">Submit sales data & check remaining stock.</p>
          </button>
       </div>

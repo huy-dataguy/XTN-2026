@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Product, User } from '../../types';
-import { orderService } from '../../services/orderService'; // <--- IMPORT MỚI
-import { ShoppingCart, Loader2 } from 'lucide-react'; // Thêm icon Loader
+import { orderService } from '../../services/orderService';
+import { ShoppingCart, Loader2, ImageOff } from 'lucide-react'; // Thêm icon ImageOff
 
 interface OrderPageProps {
   user: User;
@@ -11,7 +11,7 @@ interface OrderPageProps {
 
 export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuccess }) => {
   const [cart, setCart] = useState<{productId: string, quantity: number}[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // <--- STATE MỚI: Để hiện loading
+  const [isLoading, setIsLoading] = useState(false);
 
   const addToCart = (productId: string) => {
     setCart(prev => {
@@ -29,25 +29,22 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
     }
   };
 
-  // --- HÀM GỌI API MỚI ---
   const submitOrder = async () => {
     if (cart.length === 0) return;
 
-    setIsLoading(true); // Bắt đầu loading
+    setIsLoading(true);
     try {
-      // Gọi API thực tế. 
-      // Lưu ý: Không cần gửi user.id, Backend tự lấy từ Token.
+      // API call
       await orderService.create(cart);
       
-      setCart([]); // Xóa giỏ hàng
+      setCart([]);
       alert('Order placed successfully!');
-      onOrderSuccess(); // Refresh lại dữ liệu ở App.tsx
+      onOrderSuccess(); 
     } catch (error: any) {
-      // Xử lý lỗi từ Backend trả về
       const message = error.response?.data?.msg || 'Failed to place order';
       alert(`Error: ${message}`);
     } finally {
-      setIsLoading(false); // Tắt loading dù thành công hay thất bại
+      setIsLoading(false);
     }
   };
 
@@ -58,18 +55,35 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-120px)]">
+      {/* Product List */}
       <div className="flex-1 overflow-y-auto pr-2">
          <h2 className="text-2xl font-bold text-slate-800 mb-4">Product Catalog</h2>
+         {products.length === 0 && <p className="text-slate-500">No products available.</p>}
+         
          <div className="grid grid-cols-1 gap-4">
             {products.map(p => {
               const inCart = cart.find(c => c.productId === p.id);
               return (
                 <div key={p.id} className="flex justify-between items-center p-4 bg-white border rounded-lg shadow-sm hover:shadow-md transition">
                   <div className="flex items-center gap-4">
-                    <img src={p.image} alt="" className="w-16 h-16 rounded object-cover border border-slate-100" />
+                    {/* Xử lý ảnh an toàn hơn */}
+                    <div className="w-16 h-16 rounded overflow-hidden border border-slate-100 flex-shrink-0 bg-slate-50 flex items-center justify-center">
+                        <img 
+                            src={p.image} 
+                            alt="" 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => { 
+                                (e.target as HTMLImageElement).style.display = 'none'; // Ẩn ảnh lỗi
+                                // Logic fallback icon sẽ hiện ra nhờ CSS hoặc cách khác, ở đây mình dùng thẻ cha
+                                ((e.target as HTMLImageElement).parentElement as HTMLElement).classList.add('bg-slate-200');
+                            }}
+                        />
+                         {/* Fallback nếu ảnh không load được (icon ẩn dưới ảnh, hiện ra khi ảnh lỗi/ẩn) */}
+                    </div>
+
                     <div>
                       <p className="font-bold text-lg text-slate-800">{p.name}</p>
-                      <p className="text-sm text-slate-500">{p.category} • Stock: {p.stock}</p>
+                      <p className="text-sm text-slate-500">{p.category} • Available: {p.stock}</p>
                       <p className="text-blue-600 font-semibold mt-1">${p.price.toLocaleString()}</p>
                     </div>
                   </div>
@@ -78,7 +92,11 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
                        <div className="flex items-center border rounded-lg overflow-hidden">
                          <button onClick={() => updateCartQuantity(p.id, inCart.quantity - 1)} className="px-3 py-1 bg-slate-100 hover:bg-slate-200">-</button>
                          <span className="px-3 py-1 font-bold min-w-[40px] text-center">{inCart.quantity}</span>
-                         <button onClick={() => updateCartQuantity(p.id, inCart.quantity + 1)} className="px-3 py-1 bg-slate-100 hover:bg-slate-200">+</button>
+                         <button 
+                            onClick={() => updateCartQuantity(p.id, inCart.quantity + 1)} 
+                            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
+                            disabled={inCart.quantity >= p.stock} // Chặn mua quá tồn kho hiện tại
+                         >+</button>
                        </div>
                      ) : (
                        <button 
@@ -86,7 +104,7 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
                          disabled={p.stock === 0}
                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
                        >
-                         Add to Cart
+                         {p.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                        </button>
                      )}
                      {inCart && (
@@ -99,7 +117,8 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
          </div>
       </div>
 
-      <div className="md:w-96 bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col h-fit">
+      {/* Shopping Cart Sidebar */}
+      <div className="md:w-96 bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col h-fit sticky top-6">
          <div className="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
            <h3 className="font-bold text-lg flex items-center"><ShoppingCart className="w-5 h-5 mr-2"/> Current Order</h3>
          </div>
@@ -128,9 +147,8 @@ export const OrderPage: React.FC<OrderPageProps> = ({ user, products, onOrderSuc
            </div>
            <button 
              onClick={submitOrder} 
-             // Khóa nút khi giỏ hàng rỗng HOẶC đang loading
              disabled={cart.length === 0 || isLoading}
-             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+             className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center transition"
            >
              {isLoading ? (
                 <>

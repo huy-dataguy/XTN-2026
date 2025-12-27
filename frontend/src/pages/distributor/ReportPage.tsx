@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Product, User, WeeklyReport, Order, ReportStatus, OrderStatus } from '../../types';
-import { ReportService } from '../../services/mockBackend';
+import { reportService } from '../../services/reportService'; // <--- Dùng Service thật
 import { Card } from '../../components/Card';
-import { AlertCircle, Save } from 'lucide-react';
+import { AlertCircle, Save, Loader2 } from 'lucide-react'; // Thêm Loader icon
 
 interface ReportPageProps {
   user: User;
@@ -16,12 +16,14 @@ interface ReportPageProps {
 export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReports, myOrders, editReportId, onReportSubmit }) => {
   const [reportNotes, setReportNotes] = useState('');
   const [reportDetails, setReportDetails] = useState<Record<string, { sold: number, damaged: number }>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // <--- Loading state
 
+  // Load dữ liệu khi sửa báo cáo
   useEffect(() => {
     if (editReportId) {
       const report = myReports.find(r => r.id === editReportId);
       if (report) {
-        setReportNotes(report.notes);
+        setReportNotes(report.notes || '');
         const details: Record<string, { sold: number, damaged: number }> = {};
         report.details.forEach(d => {
           details[d.productId] = { sold: d.quantitySold, damaged: d.quantityDamaged };
@@ -34,14 +36,24 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
     }
   }, [editReportId, myReports]);
 
+  // Logic tính ngày đầu tuần (Thứ 2)
   const getCurrentWeekStart = () => {
+    // Nếu đang Edit, giữ nguyên ngày của báo cáo cũ, nếu không thì lấy tuần hiện tại
+    if (editReportId) {
+       const report = myReports.find(r => r.id === editReportId);
+       if (report) return report.weekStartDate;
+    }
+
     const d = new Date();
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
     const monday = new Date(d.setDate(diff));
-    return monday.toISOString().split('T')[0];
+    // Reset giờ về 0 để tránh lệch múi giờ khi so sánh string
+    monday.setHours(0,0,0,0);
+    return monday.toISOString(); // Backend lưu Date object
   };
 
+  // Logic tính tồn kho: Lấy báo cáo đã duyệt gần nhất + Đơn hàng mới nhập
   const getProductStockStats = (productId: string) => {
     const approvedReports = myReports
       .filter(r => r.status === ReportStatus.APPROVED)
@@ -55,10 +67,11 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
       prevRemaining = prevDetail ? prevDetail.remainingStock : 0;
     }
 
+    // Chỉ tính các đơn hàng đã Approved và ngày tạo > ngày báo cáo trước đó
     const validOrders = myOrders.filter(o => {
       if (o.status !== OrderStatus.APPROVED) return false;
       if (previousReport) {
-         return new Date(o.createdAt) > new Date(previousReport.weekStartDate);
+         return new Date(o.createdAt).getTime() > new Date(previousReport.weekStartDate).getTime();
       }
       return true;
     });
@@ -85,50 +98,61 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
     }));
   };
 
-  const submitReport = (e: React.FormEvent) => {
+  // --- HÀM SUBMIT (GỌI API THẬT) ---
+  const submitReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    const weekStart = getCurrentWeekStart();
     
-    const details = products.map(p => {
-      const input = reportDetails[p.id] || { sold: 0, damaged: 0 };
-      const stats = getProductStockStats(p.id);
-      const sold = Math.min(input.sold, stats.totalAvailable);
-      const damaged = Math.min(input.damaged, stats.totalAvailable - sold);
-      const remaining = stats.totalAvailable - sold - damaged;
+    setIsSubmitting(true);
+    try {
+        const weekStart = getCurrentWeekStart();
+        
+        // Tính toán chi tiết từng sản phẩm để gửi lên Server
+        const details = products.map(p => {
+          const input = reportDetails[p.id] || { sold: 0, damaged: 0 };
+          const stats = getProductStockStats(p.id);
+          
+          // Validate logic: Không thể bán nhiều hơn số đang có
+          const sold = Math.min(input.sold, stats.totalAvailable);
+          const damaged = Math.min(input.damaged, stats.totalAvailable - sold);
+          const remaining = stats.totalAvailable - sold - damaged;
 
-      return {
-        productId: p.id,
-        productName: p.name,
-        quantityReceived: stats.totalAvailable,
-        quantitySold: sold,
-        quantityDamaged: damaged,
-        revenue: sold * p.price,
-        remainingStock: remaining
-      };
-    });
+          return {
+            productId: p.id,
+            productName: p.name,
+            quantityReceived: stats.totalAvailable,
+            quantitySold: sold,
+            quantityDamaged: damaged,
+            revenue: sold * p.price,
+            remainingStock: remaining
+          };
+        });
 
-    const totalRevenue = details.reduce((sum, d) => sum + d.revenue, 0);
-    const totalSold = details.reduce((sum, d) => sum + d.quantitySold, 0);
-    const totalDamaged = details.reduce((sum, d) => sum + d.quantityDamaged, 0);
+        const totalRevenue = details.reduce((sum, d) => sum + d.revenue, 0);
+        const totalSold = details.reduce((sum, d) => sum + d.quantitySold, 0);
+        const totalDamaged = details.reduce((sum, d) => sum + d.quantityDamaged, 0);
 
-    const reportPayload = {
-      distributorId: user.id,
-      distributorName: user.name,
-      distributorGroup: user.group,
-      totalRevenue,
-      totalSold,
-      totalDamaged,
-      details,
-      notes: reportNotes,
-      weekStartDate: weekStart
-    };
+        const reportPayload = {
+          // distributorId: user.id, // Backend tự lấy từ Token
+          totalRevenue,
+          totalSold,
+          totalDamaged,
+          details,
+          notes: reportNotes,
+          weekStartDate: weekStart
+        };
 
-    if (editReportId) {
-      ReportService.update(editReportId, reportPayload);
-    } else {
-      ReportService.create(reportPayload);
+        if (editReportId) {
+          await reportService.update(editReportId, reportPayload);
+        } else {
+          await reportService.submit(reportPayload);
+        }
+        
+        onReportSubmit(); // Refresh data ở App.tsx
+    } catch (error: any) {
+        alert(error.response?.data?.msg || "Failed to submit report");
+    } finally {
+        setIsSubmitting(false);
     }
-    onReportSubmit();
   };
 
   const calculatedRevenue = products.reduce((acc, p) => {
@@ -228,8 +252,13 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
                <p className="text-3xl font-bold text-emerald-600">${calculatedRevenue.toLocaleString()}</p>
              </div>
              <div className="flex gap-2 mt-4">
-               <button type="submit" className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition">
-                  <Save className="w-4 h-4 mr-2"/> {editReportId ? "Update Report" : "Submit Report"}
+               <button 
+                 type="submit" 
+                 disabled={isSubmitting}
+                 className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition disabled:opacity-70 disabled:cursor-not-allowed"
+               >
+                  {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Save className="w-4 h-4 mr-2"/>}
+                  {editReportId ? "Update Report" : "Submit Report"}
                </button>
              </div>
            </div>

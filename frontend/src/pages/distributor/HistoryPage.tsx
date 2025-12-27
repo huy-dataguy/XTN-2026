@@ -11,6 +11,11 @@ interface HistoryPageProps {
 export const HistoryPage: React.FC<HistoryPageProps> = ({ myReports, myOrders, onEditReport }) => {
   const [viewReport, setViewReport] = useState<WeeklyReport | null>(null);
 
+  // Helper function để format ngày
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB');
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-slate-800">History Log</h2>
@@ -34,7 +39,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ myReports, myOrders, o
              <tbody className="divide-y divide-slate-100">
                 {myReports.map(r => (
                    <tr key={r.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium">{r.weekStartDate}</td>
+                      <td className="px-4 py-3 font-medium">{formatDate(r.weekStartDate)}</td>
                       <td className="px-4 py-3">
                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
                             r.status === ReportStatus.APPROVED ? 'bg-green-100 text-green-700' : 
@@ -48,6 +53,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ myReports, myOrders, o
                            <button onClick={() => setViewReport(r)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-full" title="View Details">
                              <Eye className="w-4 h-4" />
                            </button>
+                           {/* Chỉ cho phép sửa khi trạng thái là PENDING */}
                            {r.status === ReportStatus.PENDING && (
                              <button onClick={() => onEditReport(r)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-full" title="Edit">
                                 <Edit className="w-4 h-4" />
@@ -73,13 +79,13 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ myReports, myOrders, o
                 <div key={o.id} className="p-4 flex justify-between items-center hover:bg-slate-50">
                    <div>
                       <div className="flex items-center gap-2">
-                         <span className="font-bold text-slate-700">Order #{o.id}</span>
+                         <span className="font-bold text-slate-700">Order #{o.id.slice(-6).toUpperCase()}</span>
                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
                             o.status === OrderStatus.APPROVED ? 'bg-green-100 text-green-700' : 
                             o.status === OrderStatus.REJECTED ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
                           }`}>{o.status}</span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">{new Date(o.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500 mt-1">{formatDate(o.createdAt)}</p>
                    </div>
                    <div className="text-right">
                       <p className="font-bold text-blue-700">${o.totalAmount.toLocaleString()}</p>
@@ -94,11 +100,11 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ myReports, myOrders, o
       {/* VIEW REPORT MODAL */}
       {viewReport && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-           <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+           <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="p-6 border-b flex justify-between items-center">
                  <div>
                     <h3 className="text-xl font-bold">Report Details</h3>
-                    <p className="text-slate-500 text-sm">Week of {viewReport.weekStartDate}</p>
+                    <p className="text-slate-500 text-sm">Week of {formatDate(viewReport.weekStartDate)}</p>
                  </div>
                  <button onClick={() => setViewReport(null)} className="text-slate-400 hover:text-slate-600">
                     <X className="w-6 h-6" />

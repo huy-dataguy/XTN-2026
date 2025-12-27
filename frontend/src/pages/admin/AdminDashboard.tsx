@@ -1,70 +1,77 @@
 import React, { useState } from 'react';
 import { WeeklyReport, Order, Product, DistributorGroup, ReportStatus } from '../../types';
-import { AuthService } from '../../services/mockBackend';
-// import { analyzeBusinessPerformance } from '../../services/geminiService';
+// XÓA: import { AuthService } from '../../services/mockBackend'; -> Không cần nữa
 import { Card, StatCard } from '../../components/Card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { TrendingUp, DollarSign, ClipboardList, Bot, Loader2 } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { TrendingUp, DollarSign, ClipboardList } from 'lucide-react';
 
 interface AdminDashboardProps {
-  reports: WeeklyReport[];
+  reports: WeeklyReport[]; // Dữ liệu này được truyền từ App.tsx (đã fetch từ API)
   orders: Order[];
   products: Product[];
 }
 
 const LINE_COLORS = ['#2563eb', '#db2777', '#ea580c', '#16a34a', '#7c3aed'];
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders, products }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders }) => {
   const [distributorFilter, setDistributorFilter] = useState<string>('ALL');
-  const [aiAnalysis, setAiAnalysis] = useState<string>('');
-  const [isLoadingAi, setIsLoadingAi] = useState(false);
+  
+  // Phần AI Analysis tạm thời comment lại chờ tích hợp sau
+  // const [aiAnalysis, setAiAnalysis] = useState<string>('');
+  // const [isLoadingAi, setIsLoadingAi] = useState(false);
 
-  // const handleGenerateAI = async () => {
-  //   setIsLoadingAi(true);
-  //   const analysis = await analyzeBusinessPerformance(reports, orders, products);
-  //   setAiAnalysis(analysis);
-  //   setIsLoadingAi(false);
-  // };
-
+  // --- LOGIC LỌC DỮ LIỆU ---
   const getFilteredReports = () => {
     if (distributorFilter === 'ALL') return reports;
-    const users = AuthService.getAllDistributors();
-    return reports.filter(r => {
-      const dist = users.find(u => u.id === r.distributorId);
-      return dist?.group === distributorFilter;
-    });
+    
+    // Backend đã trả về distributorGroup trong từng report, ta lọc trực tiếp
+    return reports.filter(r => r.distributorGroup === distributorFilter);
   };
 
   const filteredReports = getFilteredReports();
-  const totalRevenue = filteredReports.reduce((sum, r) => sum + r.totalRevenue, 0);
-  const totalSold = filteredReports.reduce((sum, r) => sum + r.totalSold, 0);
+  
+  // Tính toán tổng quan
+  const totalRevenue = filteredReports.reduce((sum, r) => sum + (r.totalRevenue || 0), 0);
+  const totalSold = filteredReports.reduce((sum, r) => sum + (r.totalSold || 0), 0);
   const pendingReports = reports.filter(r => r.status === ReportStatus.PENDING).length;
 
+  // --- CHUẨN BỊ DỮ LIỆU BIỂU ĐỒ ---
   const getChartData = () => {
+    // Sắp xếp theo ngày tăng dần
     const sorted = [...filteredReports].sort((a, b) => new Date(a.weekStartDate).getTime() - new Date(b.weekStartDate).getTime());
+    
     const groupedByWeek: Record<string, any> = {};
+
     sorted.forEach(r => {
-      const week = r.weekStartDate;
-      if (!groupedByWeek[week]) groupedByWeek[week] = { name: week };
+      // Format ngày cho đẹp (VD: "Dec 25")
+      const dateObj = new Date(r.weekStartDate);
+      const weekLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      if (!groupedByWeek[weekLabel]) groupedByWeek[weekLabel] = { name: weekLabel };
       
       if (distributorFilter === 'ALL') {
+        // Nếu xem tất cả: Gom nhóm theo Group (GOLD, SILVER...)
         const group = r.distributorGroup || 'OTHER';
-        groupedByWeek[week][group] = (groupedByWeek[week][group] || 0) + r.totalRevenue;
+        groupedByWeek[weekLabel][group] = (groupedByWeek[weekLabel][group] || 0) + r.totalRevenue;
       } else {
-        groupedByWeek[week][r.distributorName] = (groupedByWeek[week][r.distributorName] || 0) + r.totalRevenue;
+        // Nếu đang lọc 1 Group cụ thể: Gom nhóm theo Tên người phân phối
+        const distName = r.distributorName || 'Unknown';
+        groupedByWeek[weekLabel][distName] = (groupedByWeek[weekLabel][distName] || 0) + r.totalRevenue;
       }
     });
     return Object.values(groupedByWeek);
   };
 
   const chartData = getChartData();
+  
+  // Xác định các đường (Lines) sẽ vẽ trên biểu đồ
   const chartKeys = distributorFilter === 'ALL' 
-    ? Object.values(DistributorGroup) 
-    : Array.from(new Set(getFilteredReports().map(r => r.distributorName)));
+    ? Object.values(DistributorGroup) // Vẽ đường cho từng Group
+    : Array.from(new Set(getFilteredReports().map(r => r.distributorName || 'Unknown'))); // Vẽ đường cho từng User
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-slate-200 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Financial Analytics</h2>
           <p className="text-sm text-slate-500">Overview of network performance</p>
@@ -72,7 +79,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders,
         <div className="flex items-center space-x-2">
           <span className="text-sm text-slate-500 font-medium">Filter By:</span>
           <select 
-            className="p-2 border rounded-md text-sm bg-slate-50 min-w-[150px]"
+            className="p-2 border rounded-md text-sm bg-slate-50 min-w-[200px] outline-none focus:ring-2 focus:ring-blue-500"
             value={distributorFilter}
             onChange={(e) => setDistributorFilter(e.target.value)}
           >
@@ -85,63 +92,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders,
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard label="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} icon={<DollarSign className="w-6 h-6 text-emerald-600" />} color="text-emerald-600" />
-        <StatCard label="Items Sold" value={totalSold} icon={<TrendingUp className="w-6 h-6 text-blue-600" />} color="text-blue-600" />
-        <StatCard label="Pending Reports" value={pendingReports} icon={<ClipboardList className="w-6 h-6 text-amber-600" />} color="text-amber-600" />
+        <StatCard 
+            label="Total Revenue" 
+            value={`$${totalRevenue.toLocaleString()}`} 
+            icon={<DollarSign className="w-6 h-6 text-emerald-600" />} 
+            color="text-emerald-600" 
+        />
+        <StatCard 
+            label="Items Sold" 
+            value={totalSold} 
+            icon={<TrendingUp className="w-6 h-6 text-blue-600" />} 
+            color="text-blue-600" 
+        />
+        <StatCard 
+            label="Pending Reports" 
+            value={pendingReports} 
+            icon={<ClipboardList className="w-6 h-6 text-amber-600" />} 
+            color="text-amber-600" 
+        />
       </div>
 
-      <Card title={distributorFilter === 'ALL' ? "Revenue Trends by Group" : "Distributor Performance Breakdown"}>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{fontSize: 12}} />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value}`} />
-                <Legend />
-                {chartKeys.map((key, index) => (
-                  <Line 
-                    key={key} 
-                    type="monotone" 
-                    dataKey={key} 
-                    stroke={LINE_COLORS[index % LINE_COLORS.length]} 
-                    activeDot={{ r: 8 }} 
-                    strokeWidth={2}
+      {chartData.length > 0 ? (
+        <Card title={distributorFilter === 'ALL' ? "Revenue Trends by Group" : "Distributor Performance Breakdown"}>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                  <YAxis tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} tickFormatter={(value) => `$${value/1000}k`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, 'Revenue']}
                   />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-      </Card>
+                  <Legend iconType="circle" />
+                  {chartKeys.map((key, index) => (
+                    <Line 
+                      key={key} 
+                      type="monotone" 
+                      dataKey={key} 
+                      stroke={LINE_COLORS[index % LINE_COLORS.length]} 
+                      strokeWidth={3}
+                      dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                      activeDot={{ r: 8 }} 
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+        </Card>
+      ) : (
+        <div className="p-10 text-center bg-white rounded-lg border border-slate-200">
+            <p className="text-slate-500">No data available for the selected filter.</p>
+        </div>
+      )}
 
-      {/* <Card title="AI Business Intelligence" className="border-purple-200 bg-purple-50">
-         <div className="space-y-4">
-           {!aiAnalysis && (
-             <div className="text-center py-8">
-                <p className="text-slate-600 mb-4">Get insights on detailed product performance, inventory alerts, and strategic recommendations.</p>
-                <button 
-                  onClick={handleGenerateAI} 
-                  disabled={isLoadingAi}
-                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-                >
-                  {isLoadingAi ? <Loader2 className="w-5 h-5 mr-2 animate-spin"/> : <Bot className="w-5 h-5 mr-2" />}
-                  {isLoadingAi ? 'Analyzing...' : 'Analyze Business Performance'}
-                </button>
-             </div>
-           )}
-           {aiAnalysis && (
-             <div className="prose prose-sm max-w-none bg-white p-4 rounded-lg border border-purple-100">
-               <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-semibold text-purple-800 flex items-center"><Bot className="w-4 h-4 mr-2"/> Gemini Analysis</h4>
-                  <button onClick={() => setAiAnalysis('')} className="text-xs text-slate-400 hover:text-slate-600">Clear</button>
-               </div>
-               <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
-                 {aiAnalysis}
-               </div>
-             </div>
-           )}
-         </div>
-      </Card> */}
+      {/* Placeholder cho phần AI Analysis */}
+      {/* <Card title="AI Business Intelligence" className="border-purple-200 bg-purple-50"> ... </Card> */}
     </div>
   );
 };

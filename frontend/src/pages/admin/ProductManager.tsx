@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../../types';
-import { productService } from '../../services/productService'; // <--- Import Service thật
-import { Plus, Trash2, Loader2 } from 'lucide-react'; // Thêm icon Loader
+import { productService } from '../../services/productService'; // Service thật
+import { Plus, Trash2, Loader2, Image as ImageIcon } from 'lucide-react'; 
 
 interface ProductManagerProps {
   products: Product[];
@@ -10,7 +10,7 @@ interface ProductManagerProps {
 
 export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefresh }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); // <--- State loading
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     name: '', 
@@ -20,42 +20,39 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
     image: '' 
   });
 
-  // --- XỬ LÝ TẠO MỚI ---
+  // --- CREATE ---
   const handleSave = async () => {
     if (!newProduct.name || !newProduct.price) {
       alert("Please fill in Name and Price");
       return;
     }
 
-    setIsSubmitting(true); // Bắt đầu loading
+    setIsSubmitting(true);
     try {
-      // Gọi API tạo mới
       await productService.create({
         ...newProduct,
-        // Nếu không nhập ảnh thì dùng ảnh mặc định placeholder
+        // Placeholder nếu không có ảnh
         image: newProduct.image || 'https://placehold.co/400?text=No+Image'
       });
 
-      // Thành công
       setIsModalOpen(false);
       setNewProduct({ name: '', price: 0, stock: 0, category: '', image: '' });
-      onRefresh(); // Gọi App.tsx load lại danh sách
+      onRefresh(); // Refresh list
       alert('Product created successfully!');
-
     } catch (error: any) {
       alert(error.response?.data?.msg || 'Failed to create product');
     } finally {
-      setIsSubmitting(false); // Tắt loading
+      setIsSubmitting(false);
     }
   };
 
-  // --- XỬ LÝ XÓA ---
+  // --- DELETE ---
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
       await productService.delete(id);
-      onRefresh(); // Load lại danh sách sau khi xóa
+      onRefresh();
     } catch (error: any) {
       alert(error.response?.data?.msg || 'Failed to delete product');
     }
@@ -77,17 +74,20 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
         {products.map(p => (
           <div key={p.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition">
             <div className="h-48 bg-slate-100 relative group">
-              <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+              <img 
+                src={p.image} 
+                alt={p.name} 
+                className="w-full h-full object-cover" 
+                onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400?text=Error'; }}
+              />
               <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-md text-xs font-bold shadow text-slate-700">
                 Stock: {p.stock}
               </div>
             </div>
             <div className="p-4 flex-1 flex flex-col">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                   <h3 className="font-bold text-slate-800 text-lg">{p.name}</h3>
-                   <span className="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded mt-1">{p.category}</span>
-                </div>
+              <div className="mb-2">
+                 <h3 className="font-bold text-slate-800 text-lg">{p.name}</h3>
+                 <span className="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded mt-1 font-medium">{p.category}</span>
               </div>
               
               <div className="mt-auto flex justify-between items-center pt-4 border-t border-slate-100">
@@ -137,8 +137,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ products, onRefr
 
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Image URL</label>
-                <input type="text" placeholder="https://..." className="w-full border border-slate-300 p-2.5 rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} />
+                <div className="relative">
+                    <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                    <input type="text" placeholder="https://..." className="w-full border border-slate-300 p-2.5 pl-9 rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} />
+                </div>
               </div>
             </div>
 
