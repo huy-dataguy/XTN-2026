@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: 'http://be-vvnspkt-xtn2026:5000/api', // Địa chỉ Backend của bạn
+  baseURL: 'https://be-vvnspkt-xtn2026:5000/api', // Địa chỉ Backend của bạn
   headers: {
     'Content-Type': 'application/json',
   },

@@ -43,4 +43,4 @@ export const MOCK_ALERTS = [
   { event_id: 'EVT-1012', timestamp: generateTimestamp(6), location: 'Chợ An Đông', violence_score: 0.91, label: 'Fight', model_version: 'v2.1.1', clip_link: '#', status: 'Reviewed' },
 ];
 
-export const API_BASE_URL = "http://be-vvnspkt-xtn2026:5000/api";
+export const API_BASE_URL = "https://be-vvnspkt-xtn2026:5000/api";
