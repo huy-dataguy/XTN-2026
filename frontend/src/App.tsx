@@ -172,13 +172,24 @@ const fetchData = async () => {
               <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
               <span className="ml-3 text-lg font-medium text-slate-600">Loading system data...</span>
             </div>
+          // ... (Các đoạn code trên giữ nguyên)
+
           ) : user.role === UserRole.ADMIN ? (
              // --- ADMIN VIEWS ---
              <>
                {activeTab === 'dashboard' && <AdminDashboard reports={reports} orders={orders} products={products} />}
                {activeTab === 'users' && <UserManager users={distributors} />}
                {activeTab === 'products' && <ProductManager products={products} onRefresh={fetchData} />}
-               {activeTab === 'orders' && <OrderManager orders={orders} onRefresh={fetchData} />}
+               
+               {/* SỬA LẠI DÒNG NÀY */}
+               {activeTab === 'orders' && (
+                 <OrderManager 
+                   orders={orders} 
+                   distributors={distributors} // <--- Thêm dòng này vào
+                   onRefresh={fetchData} 
+                 />
+               )}
+
                {activeTab === 'reports' && (
                   <ReportManager 
                     reports={reports} 
@@ -189,6 +200,8 @@ const fetchData = async () => {
                )}
              </>
           ) : (
+
+// ... (Các đoạn code dưới giữ nguyên)
              // --- DISTRIBUTOR VIEWS ---
              <>
                {activeTab === 'dashboard' && (
