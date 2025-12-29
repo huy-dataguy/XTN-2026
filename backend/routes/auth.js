@@ -67,4 +67,59 @@ router.post('/login', async (req, res) => {
   }
 });
 
+
+// --- THÊM VÀO ROUTER (sau phần login/register) ---
+
+// POST /api/auth/impersonate/:id
+// Yêu cầu: Header phải có x-auth-token của Admin
+router.post('/impersonate/:id', require('../middleware/auth'), async (req, res) => {
+  try {
+    // 1. Kiểm tra người gọi API có phải là ADMIN không?
+    // req.user được lấy từ middleware auth
+    const adminRequesting = await User.findById(req.user.id);
+    if (!adminRequesting || adminRequesting.role !== 'ADMIN') {
+      return res.status(403).json({ msg: 'Access denied. Admins only.' });
+    }
+
+    // 2. Tìm user mục tiêu muốn đăng nhập vào
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // 3. Tạo Token mới với danh tính của user mục tiêu
+    const payload = {
+      user: {
+        id: targetUser.id,
+        role: targetUser.role
+      }
+    };
+
+    // Ký token (Lưu ý: process.env.JWT_SECRET phải trùng với lúc login)
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET, 
+      { expiresIn: '1d' },
+      (err, token) => {
+        if (err) throw err;
+        
+        // 4. Trả về Token và thông tin User y hệt như API Login
+        res.json({
+          token,
+          user: {
+            id: targetUser.id,
+            username: targetUser.username,
+            name: targetUser.name,
+            role: targetUser.role,
+            group: targetUser.group
+          }
+        });
+      }
+    );
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 module.exports = router;
