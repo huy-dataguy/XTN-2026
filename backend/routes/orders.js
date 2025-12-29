@@ -111,4 +111,45 @@ router.put('/:id/received', auth, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+
+// DELETE: Xóa đơn hàng
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ msg: 'Order not found' });
+    }
+
+    // Kiểm tra quyền: Chỉ Admin hoặc chính chủ (Distributor) mới được xóa
+    if (req.user.role !== 'ADMIN' && order.distributorId.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'User not authorized' });
+    }
+
+    // Logic nghiệp vụ (Optional): 
+    // Nếu đơn hàng đã duyệt (APPROVED) hoặc đang giao, Distributor không được tự ý xóa
+    if (req.user.role !== 'ADMIN' && order.status !== 'PENDING') {
+       return res.status(400).json({ msg: 'Cannot delete processed order' });
+    }
+
+    // --- QUAN TRỌNG: Hoàn lại số lượng tồn kho (Restock) ---
+    // Vì lúc tạo đơn đã trừ kho, nên khi xóa đơn phải cộng lại.
+    for (const item of order.items) {
+      await Product.findByIdAndUpdate(
+        item.productId, 
+        { $inc: { stock: item.quantity } } // $inc: increment (cộng thêm)
+      );
+    }
+
+    // Thực hiện xóa
+    await Order.findByIdAndDelete(req.params.id);
+
+    res.json({ msg: 'Order removed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+
 module.exports = router;

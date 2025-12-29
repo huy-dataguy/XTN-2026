@@ -1,4 +1,3 @@
-// src/services/orderService.ts
 import axiosClient from '../api/axiosClient';
 import { OrderStatus } from '../types';
 
@@ -16,9 +15,13 @@ export const orderService = {
     return axiosClient.put(`/orders/${id}/status`, { status });
   },
 
-  // --- THÊM HÀM NÀY VÀO ĐÂY ---
   // Cập nhật trạng thái "Đã nhận hàng" (Received)
   updateReceivedStatus: (id: string, isReceived: boolean) => {
     return axiosClient.put(`/orders/${id}/received`, { isReceived });
+  },
+
+  // --- MỚI: Xóa đơn hàng ---
+  delete: (id: string) => {
+    return axiosClient.delete(`/orders/${id}`);
   }
 };
