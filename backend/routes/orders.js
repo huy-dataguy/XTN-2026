@@ -87,4 +87,28 @@ router.put('/:id/status', auth, async (req, res) => {
   }
 });
 
+
+// --- NEW: API cập nhật trạng thái đã nhận hàng ---
+// PUT: /api/orders/:id/received
+router.put('/:id/received', auth, async (req, res) => {
+  try {
+    const { isReceived } = req.body; // Lấy giá trị true/false từ client gửi lên
+
+    // Tìm và update
+    const order = await Order.findByIdAndUpdate(
+      req.params.id, 
+      { isReceived: isReceived },
+      { new: true } // Trả về data mới sau khi update
+    );
+
+    if (!order) {
+        return res.status(404).json({ msg: 'Order not found' });
+    }
+
+    res.json(order);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
 module.exports = router;
