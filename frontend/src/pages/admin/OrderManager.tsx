@@ -100,25 +100,35 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
   }, [orders, selectedWeek]);
 
   // --- TÍNH TOÁN THỐNG KÊ (Đã fix logic lấy ID) ---
+// --- TÍNH TOÁN THỐNG KÊ (Đã fix logic loại bỏ đơn Rejected) ---
   const groupStats = useMemo(() => {
     const stats: Record<string, { revenue: number, count: number }> = {};
+    
+    // Khởi tạo stats cho từng group
     Object.values(DistributorGroup).forEach(group => {
         stats[group] = { revenue: 0, count: 0 };
     });
 
     ordersInWeek.forEach(order => {
-      const user = getUserInfo(order); // Dùng hàm mới
+      const user = getUserInfo(order); 
       const normalizedGroup = getNormalizedGroup(user?.group);
       
       if (normalizedGroup && stats[normalizedGroup]) {
-        stats[normalizedGroup].revenue += order.totalAmount;
+        // --- LOGIC SỬA ĐỔI TẠI ĐÂY ---
+        
+        // 1. Chỉ cộng doanh thu nếu trạng thái KHÁC Rejected
+        if (order.status !== OrderStatus.REJECTED) {
+            stats[normalizedGroup].revenue += order.totalAmount;
+        }
+
+        // 2. Vẫn đếm số lượng đơn (count) để biết tổng lượng request
+        // (Nếu bạn muốn không đếm đơn Rejected vào số lượng luôn thì bọc cả dòng này vào if ở trên)
         stats[normalizedGroup].count += 1;
       }
     });
 
     return stats;
   }, [ordersInWeek, distributors]);
-
   // --- TÍNH TOÁN USER TÍCH CỰC (Đã fix logic lấy ID) ---
   const activityStats = useMemo(() => {
     const activeDistributorIds = new Set(ordersInWeek.map(o => resolveDistributorId(o)));
