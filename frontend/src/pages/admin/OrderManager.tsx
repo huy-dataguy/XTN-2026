@@ -5,11 +5,10 @@ import { Card } from '../../components/Card';
 import { 
   Check, X, Loader2, Calendar, Filter, 
   ShoppingBag, UserCheck, ChevronDown, ChevronUp, Package,
-  // --- NEW: Import icon cho checkbox ---
-  Square, CheckSquare 
+  Square, CheckSquare, Trash2, RotateCcw
 } from 'lucide-react';
 
-// --- CẤU HÌNH MÀU SẮC CHO TỪNG GROUP ---
+// --- MÀU SẮC NHÓM ---
 const GROUP_COLORS: Record<string, string> = {
   [DistributorGroup.TaiChinh]: 'bg-yellow-50 border-yellow-200 text-yellow-800',
   [DistributorGroup.VanPhong]: 'bg-blue-50 border-blue-200 text-blue-800',
@@ -32,14 +31,11 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
   const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
 
-  // --- HELPER: LẤY ID TỪ ORDER ---
+  // --- HELPER FUNCTIONS ---
   const resolveDistributorId = (order: Order): string => {
     const dist = order.distributorId as any;
     if (!dist) return '';
-    if (typeof dist === 'object') {
-        return dist.id || dist._id || '';
-    }
-    return String(dist);
+    return typeof dist === 'object' ? (dist.id || dist._id || '') : String(dist);
   };
 
   const getUserInfo = (order: Order) => {
@@ -47,21 +43,17 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     return distributors.find(u => u.id === realId);
   };
 
-  // --- HELPER: CHUẨN HÓA GROUP NAME ---
   const getNormalizedGroup = (userGroup: string | undefined): string | null => {
     if (!userGroup) return null;
     const cleanGroup = String(userGroup).trim();
-
     const enumValues = Object.values(DistributorGroup) as string[];
     if (enumValues.includes(cleanGroup)) return cleanGroup;
-
     const enumKey = cleanGroup as keyof typeof DistributorGroup;
     if (DistributorGroup[enumKey]) return DistributorGroup[enumKey];
-
     return null;
   };
 
-  // --- 1. LOGIC NGÀY THÁNG ---
+  // --- LOGIC NGÀY THÁNG ---
   const getCurrentWeekStart = () => {
     const d = new Date();
     const day = d.getDay();
@@ -84,7 +76,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     return Array.from(weeks).sort().reverse();
   }, [orders]);
 
-  // --- 2. XỬ LÝ DỮ LIỆU ---
   const ordersInWeek = useMemo(() => {
     return orders.filter(o => {
         const date = new Date(o.createdAt);
@@ -95,18 +86,15 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     });
   }, [orders, selectedWeek]);
 
-  // --- TÍNH TOÁN THỐNG KÊ ---
+  // --- THỐNG KÊ ---
   const groupStats = useMemo(() => {
     const stats: Record<string, { revenue: number, count: number }> = {};
-    
     Object.values(DistributorGroup).forEach(group => {
         stats[group] = { revenue: 0, count: 0 };
     });
-
     ordersInWeek.forEach(order => {
       const user = getUserInfo(order); 
       const normalizedGroup = getNormalizedGroup(user?.group);
-      
       if (normalizedGroup && stats[normalizedGroup]) {
         if (order.status === OrderStatus.APPROVED) {
             stats[normalizedGroup].revenue += order.totalAmount;
@@ -114,7 +102,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
         stats[normalizedGroup].count += 1;
       }
     });
-
     return stats;
   }, [ordersInWeek, distributors]);
 
@@ -125,10 +112,8 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     return { activeUsers, inactiveUsers };
   }, [ordersInWeek, distributors]);
 
-  // --- DISPLAYED ORDERS ---
   const displayedOrders = useMemo(() => {
     let list = ordersInWeek;
-
     if (filterGroup !== 'ALL') {
       const groupMap: Record<string, string> = {};
       Object.keys(DistributorGroup).forEach((key) => {
@@ -136,7 +121,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
         groupMap[key] = value;
         groupMap[value] = value;
       });
-
       list = list.filter(o => {
           const user = getUserInfo(o);
           if (!user || !user.group) {
@@ -151,28 +135,29 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
           return String(normalizedUserGroup).trim() === String(filterGroup).trim();
       });
     }
-
     return list.sort((a, b) => {
+      // Ưu tiên hiển thị Pending lên đầu
       if (a.status === OrderStatus.PENDING && b.status !== OrderStatus.PENDING) return -1;
       if (a.status !== OrderStatus.PENDING && b.status === OrderStatus.PENDING) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [ordersInWeek, filterGroup, distributors]);
 
-  // --- 3. ACTIONS ---
+  // --- HANDLERS ---
   
   const toggleOrderDetails = (orderId: string) => {
-    const newSet = new Set(expandedOrderIds);
-    if (newSet.has(orderId)) {
-      newSet.delete(orderId);
-    } else {
-      newSet.add(orderId);
-    }
-    setExpandedOrderIds(newSet);
+    setExpandedOrderIds(prev => {
+      const newSet = new Set(prev);
+      newSet.has(orderId) ? newSet.delete(orderId) : newSet.add(orderId);
+      return newSet;
+    });
   };
 
+  // Cập nhật trạng thái (Approve / Reject)
   const handleUpdateStatus = async (id: string, newStatus: OrderStatus) => {
-    if (!confirm(`Are you sure you want to ${newStatus} this order?`)) return;
+    const actionText = newStatus === OrderStatus.APPROVED ? "APPROVE" : "REJECT";
+    if (!confirm(`Are you sure you want to ${actionText} this order?`)) return;
+    
     setProcessingId(id);
     try {
       await orderService.updateStatus(id, newStatus);
@@ -184,25 +169,41 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     }
   };
 
-  // --- NEW: Handle toggle Received status ---
+  // Toggle trạng thái "Đã nhận hàng"
   const handleToggleReceived = async (e: React.MouseEvent, order: Order) => {
-    e.stopPropagation(); // Ngăn việc click lan ra Card cha (gây đóng/mở chi tiết)
-    
-    // Đảm bảo Order đã có trường isReceived (từ types.ts bạn đã sửa)
+    e.stopPropagation();
     const newStatus = !order.isReceived;
-
     try {
         await orderService.updateReceivedStatus(order.id, newStatus);
-        onRefresh(); // Refresh lại danh sách để cập nhật UI
+        onRefresh();
     } catch (error: any) {
         alert(error.response?.data?.msg || 'Failed to update received status');
+    }
+  };
+
+  // Xóa đơn hàng (Có hoàn kho)
+  const handleDeleteOrder = async (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      'Are you sure you want to DELETE this order?\n\nWARNING: This will restore the stock quantity back to the products.'
+    );
+    if (!confirmed) return;
+
+    setProcessingId(orderId);
+    try {
+      await orderService.delete(orderId);
+      onRefresh();
+    } catch (error: any) {
+      alert(error.response?.data?.msg || 'Failed to delete order.');
+    } finally {
+      setProcessingId(null);
     }
   };
 
   return (
     <div className="space-y-6">
       
-      {/* HEADER & FILTERS */}
+      {/* 1. HEADER & FILTERS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Order Management</h2>
@@ -241,68 +242,47 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
         </div>
       </div>
 
-      {/* STATS CARDS */}
+      {/* 2. STATS CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {Object.values(DistributorGroup).map(group => {
-          const isActive = filterGroup === group;
-          const stat = groupStats[group] || { revenue: 0, count: 0 };
-          const styleClass = GROUP_COLORS[group] || GROUP_COLORS['DEFAULT'];
-
-          return (
-            <div 
-              key={group} 
-              onClick={() => setFilterGroup(isActive ? 'ALL' : group)}
-              className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md ${
-                isActive ? 'ring-2 ring-blue-500 ring-offset-1 shadow-md opacity-100' : 'opacity-80 hover:opacity-100'
-              } ${styleClass}`}
-            >
-               <div className="flex justify-between items-center mb-2">
-                 <span className="font-bold text-[10px] uppercase truncate" title={group}>{group}</span>
-               </div>
-               <div className="text-lg font-bold leading-none">${stat.revenue.toLocaleString()}</div>
-               <div className="text-[10px] mt-1 opacity-70">{stat.count} orders</div>
-            </div>
-          );
-        })}
+         {Object.values(DistributorGroup).map(group => {
+            const isActive = filterGroup === group;
+            const stat = groupStats[group] || { revenue: 0, count: 0 };
+            const styleClass = GROUP_COLORS[group] || GROUP_COLORS['DEFAULT'];
+            return (
+              <div key={group} onClick={() => setFilterGroup(isActive ? 'ALL' : group)} className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md ${isActive ? 'ring-2 ring-blue-500 ring-offset-1 shadow-md opacity-100' : 'opacity-80 hover:opacity-100'} ${styleClass}`}>
+                 <div className="flex justify-between items-center mb-2">
+                   <span className="font-bold text-[10px] uppercase truncate" title={group}>{group}</span>
+                 </div>
+                 <div className="text-lg font-bold leading-none">${stat.revenue.toLocaleString()}</div>
+                 <div className="text-[10px] mt-1 opacity-70">{stat.count} orders</div>
+              </div>
+            );
+         })}
       </div>
 
-      {/* ACTIVITY SUMMARY */}
+      {/* 3. ACTIVITY SUMMARY */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div 
-            className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition"
-            onClick={() => setShowInactiveUsers(!showInactiveUsers)}
-        >
+         <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition" onClick={() => setShowInactiveUsers(!showInactiveUsers)}>
             <div className="flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-emerald-600" />
                 <span className="font-bold text-slate-700 text-sm">Participation:</span>
-                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
-                    {activityStats.activeUsers.length} / {distributors.length}
-                </span>
+                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">{activityStats.activeUsers.length} / {distributors.length}</span>
             </div>
-            <div className="text-xs text-blue-600 font-medium">
-                {showInactiveUsers ? 'Hide List' : 'Show Missing Users'}
-            </div>
+            <div className="text-xs text-blue-600 font-medium">{showInactiveUsers ? 'Hide List' : 'Show Missing Users'}</div>
         </div>
         {showInactiveUsers && (
             <div className="p-4 bg-white grid grid-cols-2 md:grid-cols-4 gap-2">
-                {activityStats.inactiveUsers.length === 0 ? (
-                    <p className="col-span-4 text-center text-sm text-emerald-600 italic">Everyone ordered!</p>
-                ) : (
-                    activityStats.inactiveUsers.map(u => {
-                        const normalizedGroup = getNormalizedGroup(u.group);
-                        return (
-                            <div key={u.id} className="text-xs p-2 bg-red-50 text-red-700 rounded border border-red-100 flex items-center justify-between">
-                                <span className="font-medium truncate">{u.name}</span>
-                                <span className="opacity-60 text-[10px]">{normalizedGroup || 'No Group'}</span>
-                            </div>
-                        )
-                    })
-                )}
+                {activityStats.inactiveUsers.length === 0 ? <p className="col-span-4 text-center text-sm text-emerald-600 italic">Everyone ordered!</p> : activityStats.inactiveUsers.map(u => (
+                    <div key={u.id} className="text-xs p-2 bg-red-50 text-red-700 rounded border border-red-100 flex items-center justify-between">
+                        <span className="font-medium truncate">{u.name}</span>
+                        <span className="opacity-60 text-[10px]">{getNormalizedGroup(u.group) || 'No Group'}</span>
+                    </div>
+                ))}
             </div>
         )}
       </div>
 
-      {/* ORDER LIST */}
+      {/* 4. ORDER LIST */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-slate-700 flex items-center gap-2">
@@ -358,13 +338,13 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                             </div>
                         </div>
 
-                        {/* TOTAL AMOUNT & ACTIONS */}
+                        {/* TOTAL AMOUNT & ICONS */}
                         <div className="flex items-center gap-4">
                             
-                             {/* --- NEW: CHECKBOX RECEIVED --- */}
+                             {/* Checkbox Received (Chỉ hiện khi Approved) */}
                              {order.status === OrderStatus.APPROVED && (
                                  <div 
-                                    className="flex flex-col items-center gap-1 cursor-pointer group select-none"
+                                    className="flex flex-col items-center gap-1 cursor-pointer group select-none mr-2"
                                     onClick={(e) => handleToggleReceived(e, order)}
                                     title="Click to toggle received status"
                                  >
@@ -378,20 +358,32 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                                     </span>
                                  </div>
                              )}
-                             {/* ----------------------------- */}
 
                              <div className="text-right pl-4 border-l border-slate-100">
                                 <div className="text-xs text-slate-400 uppercase font-semibold">Total</div>
                                 <div className="font-bold text-blue-700 text-xl">${order.totalAmount.toLocaleString()}</div>
                              </div>
 
-                             <button 
-                                onClick={() => toggleOrderDetails(order.id)}
-                                className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition"
-                                title={isExpanded ? "Hide Details" : "Show Details"}
-                             >
-                                {isExpanded ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5"/>}
-                             </button>
+                             <div className="flex items-center gap-2 pl-2">
+                                {/* Button: Delete Order */}
+                                <button 
+                                    onClick={(e) => handleDeleteOrder(e, order.id)}
+                                    disabled={processingId === order.id}
+                                    className="p-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-lg transition"
+                                    title="Delete Order (Restores Stock)"
+                                >
+                                    {processingId === order.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                                </button>
+
+                                {/* Button: Toggle Detail */}
+                                <button 
+                                    onClick={() => toggleOrderDetails(order.id)}
+                                    className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition"
+                                    title={isExpanded ? "Hide Details" : "Show Details"}
+                                >
+                                    {isExpanded ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5"/>}
+                                </button>
+                             </div>
                         </div>
                     </div>
 
@@ -426,7 +418,9 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                         </div>
                     )}
 
-                    {/* ACTION BUTTONS */}
+                    {/* --- ACTION BUTTONS --- */}
+                    
+                    {/* CASE 1: Đơn PENDING -> Hiện nút Approved & Reject */}
                     {order.status === OrderStatus.PENDING && (
                         <div className="flex gap-3 mt-4 pt-3 border-t border-slate-100">
                             <button 
@@ -448,6 +442,26 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                             </button>
                         </div>
                     )}
+
+                    {/* CASE 2: Đơn REJECTED -> Hiện nút Re-Approve (Duyệt lại) */}
+                    {order.status === OrderStatus.REJECTED && (
+                        <div className="flex justify-end mt-4 pt-3 border-t border-slate-100">
+                            <div className="flex items-center gap-3 w-full md:w-auto">
+                                <span className="text-xs text-slate-400 italic hidden md:block">
+                                    Mistake? Restore this order:
+                                </span>
+                                <button 
+                                    onClick={() => handleUpdateStatus(order.id, OrderStatus.APPROVED)} 
+                                    disabled={processingId !== null} 
+                                    className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm font-bold rounded hover:bg-blue-100 transition disabled:opacity-50"
+                                >
+                                    {processingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                                    Re-Approve
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     </Card>
                 );
              })}
