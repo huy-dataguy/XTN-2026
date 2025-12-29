@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { WeeklyReport, ReportStatus, DistributorGroup, User, Order } from '../../types'; // Thêm User
+import { WeeklyReport, ReportStatus, DistributorGroup, User, Order } from '../../types';
 import { reportService } from '../../services/reportService';
 import { Card } from '../../components/Card';
-import { Check, X, Loader2, Calendar, Filter, AlertCircle, User as UserIcon } from 'lucide-react'; // Thêm icon
+import { Check, X, Loader2, Calendar, Filter, AlertCircle, User as UserIcon } from 'lucide-react';
 
 interface ReportManagerProps {
   reports: WeeklyReport[];
-  distributors: User[]; // <--- BẮT BUỘC PHẢI CÓ để biết tổng số nhân viên
-  orders: Order[];      // <--- THÊM DÒNG NÀY ĐỂ HẾT LỖI
+  distributors: User[];
+  orders: Order[];
   onRefresh: () => void;
 }
 
@@ -15,31 +15,56 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filterGroup, setFilterGroup] = useState<string>('ALL');
 
-  // --- LOGIC NGÀY THÁNG ---
-  const getCurrentWeekStart = () => {
-    const d = new Date();
+  // --- 1. LOGIC NGÀY THÁNG (ĐÃ SỬA: Dùng Local Time để tránh lệch múi giờ) ---
+  const getMondayDateString = (date: Date) => {
+    const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(d.setDate(diff));
-    return monday.toISOString().split('T')[0];
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Tính về thứ 2
+    d.setDate(diff);
+    
+    // Format thủ công YYYY-MM-DD theo giờ địa phương (không dùng toISOString vì sẽ bị lệch sang UTC)
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const dayOfMonth = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${dayOfMonth}`;
   };
 
-  const [selectedWeek, setSelectedWeek] = useState<string>(getCurrentWeekStart());
+  // Hàm hiển thị range: Thứ 2 - Chủ Nhật
+  const getWeekRangeDisplay = (mondayStr: string) => {
+    const monday = new Date(mondayStr);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6); // Cộng thêm 6 ngày để ra Chủ Nhật
 
+    const format = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`;
+    return `${format(monday)} - ${format(sunday)}`;
+  };
+
+  const currentWeekStart = getMondayDateString(new Date());
+  const [selectedWeek, setSelectedWeek] = useState<string>(currentWeekStart);
+
+  // Tạo danh sách các tuần có trong báo cáo + tuần hiện tại
   const availableWeeks = useMemo(() => {
-    const weeks = new Set(reports.map(r => r.weekStartDate));
-    weeks.add(getCurrentWeekStart());
+    const weeks = new Set<string>();
+    // Luôn thêm tuần hiện tại
+    weeks.add(currentWeekStart);
+    // Thêm các tuần từ dữ liệu cũ
+    reports.forEach(r => {
+        // Cắt chuỗi để lấy phần YYYY-MM-DD nếu dữ liệu có giờ
+        const dateStr = r.weekStartDate.split('T')[0]; 
+        weeks.add(dateStr);
+    });
+    // Sắp xếp giảm dần (mới nhất lên đầu)
     return Array.from(weeks).sort().reverse();
-  }, [reports]);
+  }, [reports, currentWeekStart]);
 
-  // --- LỌC DỮ LIỆU ---
+  // --- 2. LỌC DỮ LIỆU ---
   
-  // 1. Lọc báo cáo theo Tuần
+  // Lọc báo cáo theo Tuần đã chọn
   const reportsInWeek = useMemo(() => {
     return reports.filter(r => r.weekStartDate.startsWith(selectedWeek));
   }, [reports, selectedWeek]);
 
-  // 2. Tính toán Thống kê Group
+  // Tính toán Thống kê Group
   const groupStats = useMemo(() => {
     const stats = {
       [DistributorGroup.TaiChinh]: { revenue: 0, sold: 0, count: 0 },
@@ -62,12 +87,13 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
     return stats;
   }, [reportsInWeek]);
 
-  // 3. Lọc danh sách báo cáo hiển thị
+  // Lọc danh sách hiển thị theo Group
   const displayedReports = useMemo(() => {
     let list = reportsInWeek;
     if (filterGroup !== 'ALL') {
       list = list.filter(r => r.distributorGroup === filterGroup);
     }
+    // Ưu tiên hiện Pending lên đầu
     return list.sort((a, b) => {
       if (a.status === ReportStatus.PENDING && b.status !== ReportStatus.PENDING) return -1;
       if (a.status !== ReportStatus.PENDING && b.status === ReportStatus.PENDING) return 1;
@@ -75,21 +101,16 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
     });
   }, [reportsInWeek, filterGroup]);
 
-  // --- LOGIC TÍNH NGƯỜI CHƯA BÁO CÁO (MỚI THÊM) ---
+  // Tính người chưa nộp báo cáo
   const missingReporters = useMemo(() => {
-    // Lấy ID những người đã nộp
     const submittedIds = new Set(reportsInWeek.map(r => r.distributorId));
     
-    // Lọc ra những người chưa nộp
     return distributors.filter(u => {
-      // Bỏ qua nếu đã nộp
       if (submittedIds.has(u.id)) return false;
-      // Bỏ qua nếu không thuộc Group đang lọc
       if (filterGroup !== 'ALL' && u.group !== filterGroup) return false;
       return true;
     });
   }, [distributors, reportsInWeek, filterGroup]);
-
 
   // --- XỬ LÝ API ---
   const handleUpdateStatus = async (id: string, status: ReportStatus) => {
@@ -126,20 +147,22 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Weekly Performance Review</h2>
-          <p className="text-sm text-slate-500">Select a week to review distributor performance.</p>
+          <p className="text-sm text-slate-500">
+             Reviewing reports for: <span className="font-bold text-blue-600">{getWeekRangeDisplay(selectedWeek)}</span>
+          </p>
         </div>
         
         <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-200">
           <Calendar className="w-5 h-5 text-slate-500" />
-          <span className="text-sm font-medium text-slate-700">Week of:</span>
+          <span className="text-sm font-medium text-slate-700">Select Week:</span>
           <select 
             value={selectedWeek}
             onChange={(e) => setSelectedWeek(e.target.value)}
-            className="bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none font-medium min-w-[140px]"
+            className="bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none font-medium min-w-[200px]"
           >
             {availableWeeks.map(week => (
               <option key={week} value={week}>
-                {new Date(week).toLocaleDateString('en-GB')} {week === getCurrentWeekStart() ? '(Current)' : ''}
+                {getWeekRangeDisplay(week)} {week === currentWeekStart ? '(Current)' : ''}
               </option>
             ))}
           </select>
@@ -178,7 +201,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                    group === DistributorGroup.HauCan ? 'bg-red-200 text-red-800' :
                    'bg-blue-200 text-blue-800'
                 }`}>
-                  {group} Partners
+                  {group}
                 </span>
                 <span className="text-xs text-slate-500 font-bold">{stat.count} Reports</span>
               </div>
@@ -198,7 +221,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
         })}
       </div>
 
-      {/* DANH SÁCH BÁO CÁO (ĐÃ CÓ) */}
+      {/* DANH SÁCH BÁO CÁO */}
       <div className="space-y-4 pt-2">
         <div className="flex justify-between items-center px-1">
           <h3 className="font-bold text-slate-700 flex items-center gap-2">
@@ -214,7 +237,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
         {displayedReports.length === 0 && (
           <div className="text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed flex flex-col items-center">
             <Calendar className="w-10 h-10 mb-2 opacity-20" />
-            <p>No reports found for this filter.</p>
+            <p>No reports found for week <span className="font-bold">{getWeekRangeDisplay(selectedWeek)}</span>.</p>
           </div>
         )}
         
@@ -242,7 +265,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                     }`}>
                       {report.status}
                     </span>
-                    <span>• {new Date(report.weekStartDate).toLocaleDateString('en-GB')}</span>
+                    <span>• {getWeekRangeDisplay(report.weekStartDate)}</span>
                  </div>
                </div>
                
@@ -319,14 +342,16 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
         ))}
       </div>
 
-      {/* --- PHẦN MỚI THÊM: NGƯỜI CHƯA BÁO CÁO --- */}
+      {/* --- PHẦN NGƯỜI CHƯA BÁO CÁO --- */}
       {missingReporters.length > 0 && (
         <div className="mt-8 pt-8 border-t-2 border-slate-200">
            <h3 className="text-lg font-bold text-red-600 flex items-center mb-4">
               <AlertCircle className="w-5 h-5 mr-2" />
               Missing Reports ({missingReporters.length})
            </h3>
-           <p className="text-sm text-slate-500 mb-4">The following distributors have not submitted a report for the week of <span className="font-bold">{new Date(selectedWeek).toLocaleDateString('en-GB')}</span>.</p>
+           <p className="text-sm text-slate-500 mb-4">
+             The following distributors have not submitted a report for the week: <span className="font-bold">{getWeekRangeDisplay(selectedWeek)}</span>.
+           </p>
            
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {missingReporters.map(user => (

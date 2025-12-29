@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Product, User, WeeklyReport, Order, ReportStatus, OrderStatus } from '../../types';
-import { reportService } from '../../services/reportService'; // <--- Dùng Service thật
+import { reportService } from '../../services/reportService';
 import { Card } from '../../components/Card';
-import { AlertCircle, Save, Loader2 } from 'lucide-react'; // Thêm Loader icon
+import { AlertCircle, Save, Loader2 } from 'lucide-react';
 
 interface ReportPageProps {
   user: User;
@@ -16,9 +16,34 @@ interface ReportPageProps {
 export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReports, myOrders, editReportId, onReportSubmit }) => {
   const [reportNotes, setReportNotes] = useState('');
   const [reportDetails, setReportDetails] = useState<Record<string, { sold: number, damaged: number }>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false); // <--- Loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load dữ liệu khi sửa báo cáo
+  // 1. Tính toán ngày bắt đầu (T2) và kết thúc (CN) của tuần báo cáo
+  const weekRange = useMemo(() => {
+    let startDate: Date;
+
+    if (editReportId) {
+      const report = myReports.find(r => r.id === editReportId);
+      startDate = report ? new Date(report.weekStartDate) : new Date();
+    } else {
+      const d = new Date();
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      startDate = new Date(d.setDate(diff));
+    }
+    startDate.setHours(0, 0, 0, 0);
+
+    // Tính ngày kết thúc tuần (Thứ 2 tuần sau 00:00:00 làm mốc chặn)
+    const nextWeekStart = new Date(startDate);
+    nextWeekStart.setDate(startDate.getDate() + 7);
+
+    return { 
+        start: startDate, 
+        endLimit: nextWeekStart // Các đơn hàng phải nhỏ hơn thời gian này
+    };
+  }, [editReportId, myReports]);
+
+  // Load dữ liệu khi edit
   useEffect(() => {
     if (editReportId) {
       const report = myReports.find(r => r.id === editReportId);
@@ -36,30 +61,15 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
     }
   }, [editReportId, myReports]);
 
-  // Logic tính ngày đầu tuần (Thứ 2)
-  const getCurrentWeekStart = () => {
-    // Nếu đang Edit, giữ nguyên ngày của báo cáo cũ, nếu không thì lấy tuần hiện tại
-    if (editReportId) {
-       const report = myReports.find(r => r.id === editReportId);
-       if (report) return report.weekStartDate;
-    }
-
-    const d = new Date();
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
-    const monday = new Date(d.setDate(diff));
-    // Reset giờ về 0 để tránh lệch múi giờ khi so sánh string
-    monday.setHours(0,0,0,0);
-    return monday.toISOString(); // Backend lưu Date object
-  };
-
-  // Logic tính tồn kho: Lấy báo cáo đã duyệt gần nhất + Đơn hàng mới nhập
+  // 2. Logic tính tồn kho đã SỬA
   const getProductStockStats = (productId: string) => {
-    const approvedReports = myReports
-      .filter(r => r.status === ReportStatus.APPROVED)
-      .sort((a,b) => new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime());
-    
-    const previousReport = approvedReports.length > 0 ? approvedReports[0] : null;
+    // A. Lấy số dư từ báo cáo APPROVED gần nhất TRƯỚC tuần này
+    const previousReport = myReports
+      .filter(r => 
+          r.status === ReportStatus.APPROVED && 
+          new Date(r.weekStartDate).getTime() < weekRange.start.getTime() // Phải là báo cáo cũ hơn tuần này
+      )
+      .sort((a, b) => new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime())[0];
     
     let prevRemaining = 0;
     if (previousReport) {
@@ -67,13 +77,13 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
       prevRemaining = prevDetail ? prevDetail.remainingStock : 0;
     }
 
-    // Chỉ tính các đơn hàng đã Approved và ngày tạo > ngày báo cáo trước đó
+    // B. Tính hàng nhập: CHỈ tính đơn hàng nằm TRONG tuần này
+    // Logic: OrderDate >= Thứ 2 tuần này  VÀ OrderDate < Thứ 2 tuần sau
     const validOrders = myOrders.filter(o => {
       if (o.status !== OrderStatus.APPROVED) return false;
-      if (previousReport) {
-         return new Date(o.createdAt).getTime() > new Date(previousReport.weekStartDate).getTime();
-      }
-      return true;
+      
+      const orderDate = new Date(o.createdAt);
+      return orderDate >= weekRange.start && orderDate < weekRange.endLimit;
     });
 
     const newReceived = validOrders.reduce((acc, order) => {
@@ -83,7 +93,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
 
     return {
       prevRemaining,
-      newReceived,
+      newReceived, // Số này giờ chỉ tính order trong tuần
       totalAvailable: prevRemaining + newReceived
     };
   };
@@ -98,20 +108,14 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
     }));
   };
 
-  // --- HÀM SUBMIT (GỌI API THẬT) ---
   const submitReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     setIsSubmitting(true);
     try {
-        const weekStart = getCurrentWeekStart();
-        
-        // Tính toán chi tiết từng sản phẩm để gửi lên Server
         const details = products.map(p => {
           const input = reportDetails[p.id] || { sold: 0, damaged: 0 };
           const stats = getProductStockStats(p.id);
           
-          // Validate logic: Không thể bán nhiều hơn số đang có
           const sold = Math.min(input.sold, stats.totalAvailable);
           const damaged = Math.min(input.damaged, stats.totalAvailable - sold);
           const remaining = stats.totalAvailable - sold - damaged;
@@ -132,13 +136,12 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
         const totalDamaged = details.reduce((sum, d) => sum + d.quantityDamaged, 0);
 
         const reportPayload = {
-          // distributorId: user.id, // Backend tự lấy từ Token
           totalRevenue,
           totalSold,
           totalDamaged,
           details,
           notes: reportNotes,
-          weekStartDate: weekStart
+          weekStartDate: weekRange.start.toISOString() // Gửi đúng ngày T2 của tuần đang chọn
         };
 
         if (editReportId) {
@@ -147,7 +150,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
           await reportService.submit(reportPayload);
         }
         
-        onReportSubmit(); // Refresh data ở App.tsx
+        onReportSubmit();
     } catch (error: any) {
         alert(error.response?.data?.msg || "Failed to submit report");
     } finally {
@@ -160,16 +163,19 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
     return acc + (info.sold * p.price);
   }, 0);
 
+  // ... (Phần render UI giữ nguyên, chỉ thay đổi logic bên trên)
+  // Lưu ý: Phần UI Table bạn có thể thêm hiển thị "New Received (This Week)" để user dễ kiểm tra
+  
   return (
     <Card title={editReportId ? "Edit Weekly Report" : "New Weekly Report"}>
        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm flex items-start">
          <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5"/>
          <div>
-            <strong>Inventory Logic:</strong> 
+            <strong>Reporting Logic for {weekRange.start.toLocaleDateString()} - {new Date(weekRange.endLimit.getTime() - 1).toLocaleDateString()}:</strong> 
             <ul className="list-disc ml-4 mt-1 space-y-1">
-               <li>Received = (Remaining from Last Approved Report) + (New Approved Orders this week).</li>
-               <li>Remaining = Received - Sold - Damaged.</li>
-               <li>Once approved, the "Remaining" count carries over to next week.</li>
+               <li><strong>Previous Remaining:</strong> Stock carried over from last approved report.</li>
+               <li><strong>Received This Week:</strong> Orders approved from Monday to Sunday of this week ONLY.</li>
+               <li>Orders placed for <em>next week</em> will not appear here.</li>
             </ul>
          </div>
        </div>
@@ -180,7 +186,10 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
              <thead className="text-xs text-slate-700 uppercase bg-slate-100">
                <tr>
                  <th className="px-4 py-3">Product</th>
-                 <th className="px-4 py-3 text-center bg-blue-50">Received</th>
+                 {/* Chia cột rõ ràng để user dễ hiểu */}
+                 <th className="px-4 py-3 text-center text-gray-500 w-20">Prev</th>
+                 <th className="px-4 py-3 text-center text-blue-600 w-20">In-Week</th>
+                 <th className="px-4 py-3 text-center bg-blue-50 w-24 border-l border-r border-blue-100 font-bold">Total Avail</th>
                  <th className="px-4 py-3 w-24">Sold</th>
                  <th className="px-4 py-3 w-24">Damaged</th>
                  <th className="px-4 py-3 text-center bg-slate-50">Remaining</th>
@@ -197,11 +206,19 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
 
                  return (
                    <tr key={p.id} className="border-b hover:bg-slate-50">
-                     <td className="px-4 py-3 font-medium">
-                        {p.name}
-                        {stats.prevRemaining > 0 && <div className="text-[10px] text-slate-400">Prev: {stats.prevRemaining}</div>}
+                     <td className="px-4 py-3 font-medium">{p.name}</td>
+                     
+                     {/* Cột Tồn cũ */}
+                     <td className="px-4 py-3 text-center text-gray-500">{stats.prevRemaining}</td>
+                     
+                     {/* Cột Nhập mới trong tuần (Sửa lại logic hiển thị) */}
+                     <td className="px-4 py-3 text-center text-blue-600 font-medium">+{stats.newReceived}</td>
+                     
+                     {/* Tổng có thể bán */}
+                     <td className="px-4 py-3 text-center bg-blue-50 font-bold border-l border-r border-blue-100 text-blue-800">
+                        {stats.totalAvailable}
                      </td>
-                     <td className="px-4 py-3 text-center text-blue-700 font-medium bg-blue-50/50">{stats.totalAvailable}</td>
+
                      <td className="px-4 py-3">
                        <input 
                          type="number" 
@@ -235,7 +252,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
              </tbody>
            </table>
          </div>
-         
+         {/* ... Phần Footer giữ nguyên ... */}
          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <div>
              <label className="block text-sm font-bold text-slate-700 mb-2">Notes / Issues</label>
@@ -243,7 +260,6 @@ export const ReportPage: React.FC<ReportPageProps> = ({ user, products, myReport
                className="w-full border p-3 rounded-lg h-24 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
                value={reportNotes} 
                onChange={e => setReportNotes(e.target.value)} 
-               placeholder="Describe market feedback, delivery issues, etc..."
              ></textarea>
            </div>
            <div className="bg-slate-50 p-6 rounded-lg flex flex-col justify-between border border-slate-200">
