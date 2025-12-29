@@ -4,7 +4,7 @@ import { orderService } from '../../services/orderService';
 import { 
   CheckSquare, Square, Search, Calendar, Package, 
   BarChart3, CheckCircle2, AlertCircle, Loader2, Filter,
-  Users, Layers, Warehouse
+  Users, Layers, Warehouse, ArrowRight
 } from 'lucide-react';
 
 // --- CONFIG COLORS ---
@@ -31,6 +31,30 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
   const [filterGroup, setFilterGroup] = useState<string>('ALL'); 
   const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
 
+  // --- LOGIC NGÀY THÁNG (RANGE FILTER) ---
+  
+  // 1. Helper format ra chuỗi YYYY-MM-DD theo giờ địa phương (tránh lỗi lệch múi giờ)
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 2. Hàm lấy ngày Thứ 2 của tuần hiện tại
+  const getMondayOfCurrentWeek = () => {
+    const d = new Date();
+    const day = d.getDay(); // 0 (CN) -> 6 (T7)
+    // Nếu là Chủ Nhật (0) thì lùi 6 ngày, các ngày khác lùi (day - 1)
+    const diff = day === 0 ? 6 : day - 1; 
+    d.setDate(d.getDate() - diff);
+    return formatDateLocal(d);
+  };
+
+  // 3. State khởi tạo: Từ Thứ 2 -> Hôm nay
+  const [startDate, setStartDate] = useState<string>(getMondayOfCurrentWeek());
+  const [endDate, setEndDate] = useState<string>(formatDateLocal(new Date()));
+
   // --- HELPER ---
   const resolveDistributorId = (order: Order): string => {
     const dist = order.distributorId as any;
@@ -51,36 +75,22 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
     return 'Other';
   };
 
-  // --- DATE FILTER ---
-  const getCurrentWeekStart = () => {
-    const d = new Date();
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff)).toISOString().split('T')[0];
-  };
-  const [selectedWeek, setSelectedWeek] = useState<string>(getCurrentWeekStart());
+  // --- DATA FILTERING (LỌC THEO KHOẢNG NGÀY ĐÃ CHỌN) ---
+  const approvedOrdersInRange = useMemo(() => {
+    if (!startDate || !endDate) return [];
 
-  const availableWeeks = useMemo(() => {
-    const weeks = new Set(orders.map(o => {
-        const d = new Date(o.createdAt);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        return new Date(d.setDate(diff)).toISOString().split('T')[0];
-    }));
-    weeks.add(getCurrentWeekStart());
-    return Array.from(weeks).sort().reverse();
-  }, [orders]);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0); // Đầu ngày
 
-  // --- DATA FILTERING ---
-  const approvedOrdersInWeek = useMemo(() => {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Cuối ngày
+
     return orders.filter(o => {
         const d = new Date(o.createdAt);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(d.setDate(diff)).toISOString().split('T')[0];
-        return monday === selectedWeek && o.status === OrderStatus.APPROVED;
+        // Lọc theo ngày & chỉ lấy đơn APPROVED
+        return d >= start && d <= end && o.status === OrderStatus.APPROVED;
     });
-  }, [orders, selectedWeek]);
+  }, [orders, startDate, endDate]);
 
   // --- LOGIC TÍNH KHO ---
   const inventoryMatrix = useMemo(() => {
@@ -91,14 +101,14 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
         stats[p.id] = {
             id: p.id,
             name: p.name,
-            currentStock: p.stock, // Stock DB
-            totalApproved: 0,      // Đã bán
-            totalReceived: 0,      // Đã lấy
+            currentStock: p.stock, 
+            totalApproved: 0,      
+            totalReceived: 0,      
         };
     });
 
-    // 2. Cộng dồn từ Order Approved
-    approvedOrdersInWeek.forEach(order => {
+    // 2. Cộng dồn từ Order Approved (Trong khoảng thời gian đã lọc)
+    approvedOrdersInRange.forEach(order => {
         order.items.forEach((item: any) => {
             const pid = item.productId;
             
@@ -121,12 +131,12 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
     });
 
     return stats;
-  }, [approvedOrdersInWeek, products]);
+  }, [approvedOrdersInRange, products]);
 
   // --- KPI STATS ---
   const headerStats = useMemo(() => {
-    const totalOrders = approvedOrdersInWeek.length;
-    const receivedCount = approvedOrdersInWeek.filter(o => o.isReceived).length;
+    const totalOrders = approvedOrdersInRange.length;
+    const receivedCount = approvedOrdersInRange.filter(o => o.isReceived).length;
     const progress = totalOrders === 0 ? 0 : Math.round((receivedCount / totalOrders) * 100);
     
     let totalPhysicalInWarehouse = 0;
@@ -137,11 +147,11 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
     });
 
     return { totalOrders, receivedCount, progress, totalPhysicalInWarehouse };
-  }, [approvedOrdersInWeek, inventoryMatrix]);
+  }, [approvedOrdersInRange, inventoryMatrix]);
 
   // --- DISPLAY LIST ---
   const filteredList = useMemo(() => {
-    let list = approvedOrdersInWeek;
+    let list = approvedOrdersInRange;
 
     if (searchTerm) {
         const lower = searchTerm.toLowerCase();
@@ -163,7 +173,7 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
     } else {
         return list.filter(o => o.isReceived);
     }
-  }, [approvedOrdersInWeek, searchTerm, filterGroup, activeTab]);
+  }, [approvedOrdersInRange, searchTerm, filterGroup, activeTab]);
 
   const handleToggleReceived = async (order: Order) => {
     if (processingId) return; 
@@ -203,8 +213,9 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
             </div>
          </div>
 
-         {/* STATS CARD */}
+         {/* STATS CARD & DATE PICKER */}
          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+            {/* Box hiển thị Total In Room */}
             <div className="flex items-center gap-3 bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100 min-w-[180px]">
                 <div className="bg-white p-2 rounded-full shadow-sm text-indigo-500">
                     <Layers className="w-5 h-5" />
@@ -217,19 +228,25 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
-                <Calendar className="w-4 h-4 text-slate-500" />
-                <select 
-                    value={selectedWeek}
-                    onChange={(e) => setSelectedWeek(e.target.value)}
-                    className="bg-transparent text-sm font-medium outline-none text-slate-700 w-full"
-                >
-                    {availableWeeks.map(week => (
-                        <option key={week} value={week}>
-                            Week: {new Date(week).toLocaleDateString('en-GB')}
-                        </option>
-                    ))}
-                </select>
+            {/* DATE PICKER */}
+            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 grow xl:grow-0">
+                <div className="flex items-center gap-2 px-2 border-r border-slate-200">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-bold text-slate-500 uppercase">From</span>
+                </div>
+                <input 
+                    type="date" 
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-transparent text-sm font-medium text-slate-700 outline-none"
+                />
+                <ArrowRight className="w-3 h-3 text-slate-400" />
+                <input 
+                    type="date" 
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-transparent text-sm font-medium text-slate-700 outline-none"
+                />
             </div>
          </div>
       </div>
@@ -276,7 +293,7 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
                             <AlertCircle className={`w-4 h-4 ${activeTab === 'pending' ? 'text-yellow-500' : ''}`} />
                             Waiting
                             <span className="bg-slate-200 text-slate-600 px-1.5 rounded-full text-[10px]">
-                                {approvedOrdersInWeek.filter(o => !o.isReceived).length}
+                                {approvedOrdersInRange.filter(o => !o.isReceived).length}
                             </span>
                         </button>
                         <button 
@@ -352,7 +369,7 @@ export const ReceivedOrderManager: React.FC<ReceivedOrderManagerProps> = ({ orde
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                   <h3 className="font-bold text-slate-700 flex items-center gap-2">
                       <BarChart3 className="w-5 h-5 text-blue-600" />
-                      Physical Inventory Matrix
+                      Physical Inventory Matrix 
                   </h3>
               </div>
               

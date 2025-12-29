@@ -5,7 +5,7 @@ import { Card } from '../../components/Card';
 import { 
   Check, X, Loader2, Calendar, Filter, 
   ShoppingBag, UserCheck, ChevronDown, ChevronUp, Package,
-  Square, CheckSquare, Trash2, RotateCcw
+  Square, CheckSquare, Trash2, RotateCcw, ArrowRight // Import thêm ArrowRight
 } from 'lucide-react';
 
 // --- MÀU SẮC NHÓM ---
@@ -31,6 +31,29 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
   const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
 
+  // --- LOGIC NGÀY THÁNG (RANGE FILTER) ---
+  
+  // 1. Helper format YYYY-MM-DD theo giờ địa phương
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 2. Lấy ngày Thứ 2 của tuần hiện tại
+  const getMondayOfCurrentWeek = () => {
+    const d = new Date();
+    const day = d.getDay(); // 0 (CN) -> 6 (T7)
+    const diff = day === 0 ? 6 : day - 1; // Nếu CN lùi 6 ngày, còn lại lùi day-1
+    d.setDate(d.getDate() - diff);
+    return formatDateLocal(d);
+  };
+
+  // 3. State mặc định: Từ Thứ 2 -> Hôm nay
+  const [startDate, setStartDate] = useState<string>(getMondayOfCurrentWeek());
+  const [endDate, setEndDate] = useState<string>(formatDateLocal(new Date()));
+
   // --- HELPER FUNCTIONS ---
   const resolveDistributorId = (order: Order): string => {
     const dist = order.distributorId as any;
@@ -53,46 +76,29 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     return null;
   };
 
-  // --- LOGIC NGÀY THÁNG ---
-  const getCurrentWeekStart = () => {
-    const d = new Date();
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(d.setDate(diff));
-    return monday.toISOString().split('T')[0];
-  };
+  // --- LỌC ĐƠN HÀNG THEO KHOẢNG THỜI GIAN ---
+  const filteredOrders = useMemo(() => {
+    if (!startDate || !endDate) return orders;
 
-  const [selectedWeek, setSelectedWeek] = useState<string>(getCurrentWeekStart());
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0); // Đầu ngày
 
-  const availableWeeks = useMemo(() => {
-    const weeks = new Set(orders.map(o => {
-        const date = new Date(o.createdAt);
-        const day = date.getDay();
-        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(date.setDate(diff));
-        return monday.toISOString().split('T')[0];
-    }));
-    weeks.add(getCurrentWeekStart());
-    return Array.from(weeks).sort().reverse();
-  }, [orders]);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Cuối ngày
 
-  const ordersInWeek = useMemo(() => {
     return orders.filter(o => {
-        const date = new Date(o.createdAt);
-        const day = date.getDay();
-        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(date.setDate(diff)).toISOString().split('T')[0];
-        return monday === selectedWeek;
+        const orderDate = new Date(o.createdAt);
+        return orderDate >= start && orderDate <= end;
     });
-  }, [orders, selectedWeek]);
+  }, [orders, startDate, endDate]);
 
-  // --- THỐNG KÊ ---
+  // --- THỐNG KÊ (Dựa trên danh sách đã lọc ngày) ---
   const groupStats = useMemo(() => {
     const stats: Record<string, { revenue: number, count: number }> = {};
     Object.values(DistributorGroup).forEach(group => {
         stats[group] = { revenue: 0, count: 0 };
     });
-    ordersInWeek.forEach(order => {
+    filteredOrders.forEach(order => {
       const user = getUserInfo(order); 
       const normalizedGroup = getNormalizedGroup(user?.group);
       if (normalizedGroup && stats[normalizedGroup]) {
@@ -103,17 +109,20 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
       }
     });
     return stats;
-  }, [ordersInWeek, distributors]);
+  }, [filteredOrders, distributors]);
 
   const activityStats = useMemo(() => {
-    const activeDistributorIds = new Set(ordersInWeek.map(o => resolveDistributorId(o)));
+    const activeDistributorIds = new Set(filteredOrders.map(o => resolveDistributorId(o)));
     const activeUsers = distributors.filter(u => activeDistributorIds.has(u.id));
     const inactiveUsers = distributors.filter(u => !activeDistributorIds.has(u.id));
     return { activeUsers, inactiveUsers };
-  }, [ordersInWeek, distributors]);
+  }, [filteredOrders, distributors]);
 
+  // --- LỌC HIỂN THỊ (THEO GROUP) ---
   const displayedOrders = useMemo(() => {
-    let list = ordersInWeek;
+    let list = filteredOrders;
+    
+    // Filter by Group
     if (filterGroup !== 'ALL') {
       const groupMap: Record<string, string> = {};
       Object.keys(DistributorGroup).forEach((key) => {
@@ -135,16 +144,16 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
           return String(normalizedUserGroup).trim() === String(filterGroup).trim();
       });
     }
+
+    // Sort: Pending -> Date Desc
     return list.sort((a, b) => {
-      // Ưu tiên hiển thị Pending lên đầu
       if (a.status === OrderStatus.PENDING && b.status !== OrderStatus.PENDING) return -1;
       if (a.status !== OrderStatus.PENDING && b.status === OrderStatus.PENDING) return 1;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [ordersInWeek, filterGroup, distributors]);
+  }, [filteredOrders, filterGroup, distributors]);
 
   // --- HANDLERS ---
-  
   const toggleOrderDetails = (orderId: string) => {
     setExpandedOrderIds(prev => {
       const newSet = new Set(prev);
@@ -153,11 +162,9 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     });
   };
 
-  // Cập nhật trạng thái (Approve / Reject)
   const handleUpdateStatus = async (id: string, newStatus: OrderStatus) => {
     const actionText = newStatus === OrderStatus.APPROVED ? "APPROVE" : "REJECT";
     if (!confirm(`Are you sure you want to ${actionText} this order?`)) return;
-    
     setProcessingId(id);
     try {
       await orderService.updateStatus(id, newStatus);
@@ -169,7 +176,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     }
   };
 
-  // Toggle trạng thái "Đã nhận hàng"
   const handleToggleReceived = async (e: React.MouseEvent, order: Order) => {
     e.stopPropagation();
     const newStatus = !order.isReceived;
@@ -181,7 +187,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     }
   };
 
-  // Xóa đơn hàng (Có hoàn kho)
   const handleDeleteOrder = async (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
     const confirmed = window.confirm(
@@ -204,19 +209,20 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     <div className="space-y-6">
       
       {/* 1. HEADER & FILTERS */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Order Management</h2>
           <p className="text-sm text-slate-500">Track orders and distributor activity.</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+            {/* Filter Group */}
+            <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 grow xl:grow-0">
                 <Filter className="w-4 h-4 text-slate-500" />
                 <select 
                     value={filterGroup}
                     onChange={(e) => setFilterGroup(e.target.value)}
-                    className="bg-transparent text-slate-700 text-sm outline-none font-medium min-w-[100px]"
+                    className="bg-transparent text-slate-700 text-sm outline-none font-medium w-full"
                 >
                     <option value="ALL">All Groups</option>
                     {Object.values(DistributorGroup).map(group => (
@@ -225,19 +231,25 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                 </select>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                <Calendar className="w-4 h-4 text-slate-500" />
-                <select 
-                    value={selectedWeek}
-                    onChange={(e) => setSelectedWeek(e.target.value)}
-                    className="bg-transparent text-slate-700 text-sm outline-none font-medium"
-                >
-                    {availableWeeks.map(week => (
-                    <option key={week} value={week}>
-                        {new Date(week).toLocaleDateString('en-GB')} {week === getCurrentWeekStart() ? '(Current)' : ''}
-                    </option>
-                    ))}
-                </select>
+            {/* 👇 DATE RANGE FILTER (ĐÃ SỬA) */}
+            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 grow xl:grow-0">
+                <div className="flex items-center gap-2 px-2 border-r border-slate-200">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-bold text-slate-500 uppercase">Range</span>
+                </div>
+                <input 
+                    type="date" 
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-transparent text-sm font-medium text-slate-700 outline-none"
+                />
+                <ArrowRight className="w-3 h-3 text-slate-400" />
+                <input 
+                    type="date" 
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-transparent text-sm font-medium text-slate-700 outline-none"
+                />
             </div>
         </div>
       </div>
@@ -265,14 +277,14 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
          <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition" onClick={() => setShowInactiveUsers(!showInactiveUsers)}>
             <div className="flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-emerald-600" />
-                <span className="font-bold text-slate-700 text-sm">Participation:</span>
+                <span className="font-bold text-slate-700 text-sm">Participation ({startDate} to {endDate}):</span>
                 <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">{activityStats.activeUsers.length} / {distributors.length}</span>
             </div>
             <div className="text-xs text-blue-600 font-medium">{showInactiveUsers ? 'Hide List' : 'Show Missing Users'}</div>
         </div>
         {showInactiveUsers && (
             <div className="p-4 bg-white grid grid-cols-2 md:grid-cols-4 gap-2">
-                {activityStats.inactiveUsers.length === 0 ? <p className="col-span-4 text-center text-sm text-emerald-600 italic">Everyone ordered!</p> : activityStats.inactiveUsers.map(u => (
+                {activityStats.inactiveUsers.length === 0 ? <p className="col-span-4 text-center text-sm text-emerald-600 italic">Everyone ordered in this period!</p> : activityStats.inactiveUsers.map(u => (
                     <div key={u.id} className="text-xs p-2 bg-red-50 text-red-700 rounded border border-red-100 flex items-center justify-between">
                         <span className="font-medium truncate">{u.name}</span>
                         <span className="opacity-60 text-[10px]">{getNormalizedGroup(u.group) || 'No Group'}</span>
@@ -296,7 +308,7 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
 
         {displayedOrders.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
-            <p className="text-slate-500 font-medium">No orders found.</p>
+            <p className="text-slate-500 font-medium">No orders found in this period.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -311,7 +323,7 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                         order.status === OrderStatus.APPROVED ? 'border-l-green-500' : 'border-l-red-500'
                     }`}>
                         
-                    {/* TOP ROW: Order Info */}
+                    {/* ORDER CARD CONTENT */}
                     <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
@@ -338,10 +350,8 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                             </div>
                         </div>
 
-                        {/* TOTAL AMOUNT & ICONS */}
                         <div className="flex items-center gap-4">
-                            
-                             {/* Checkbox Received (Chỉ hiện khi Approved) */}
+                             {/* Checkbox Received */}
                              {order.status === OrderStatus.APPROVED && (
                                  <div 
                                     className="flex flex-col items-center gap-1 cursor-pointer group select-none mr-2"
@@ -365,21 +375,16 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                              </div>
 
                              <div className="flex items-center gap-2 pl-2">
-                                {/* Button: Delete Order */}
                                 <button 
                                     onClick={(e) => handleDeleteOrder(e, order.id)}
                                     disabled={processingId === order.id}
                                     className="p-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-lg transition"
-                                    title="Delete Order (Restores Stock)"
                                 >
                                     {processingId === order.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
                                 </button>
-
-                                {/* Button: Toggle Detail */}
                                 <button 
                                     onClick={() => toggleOrderDetails(order.id)}
                                     className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 transition"
-                                    title={isExpanded ? "Hide Details" : "Show Details"}
                                 >
                                     {isExpanded ? <ChevronUp className="w-5 h-5"/> : <ChevronDown className="w-5 h-5"/>}
                                 </button>
@@ -387,7 +392,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                         </div>
                     </div>
 
-                    {/* EXPANDED SECTION */}
                     {isExpanded && (
                         <div className="mt-4 pt-4 border-t border-dashed border-slate-200 animate-in fade-in slide-in-from-top-1 duration-200">
                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1">
@@ -418,9 +422,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                         </div>
                     )}
 
-                    {/* --- ACTION BUTTONS --- */}
-                    
-                    {/* CASE 1: Đơn PENDING -> Hiện nút Approved & Reject */}
                     {order.status === OrderStatus.PENDING && (
                         <div className="flex gap-3 mt-4 pt-3 border-t border-slate-100">
                             <button 
@@ -431,7 +432,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                                 {processingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
                                 Approve
                             </button>
-                            
                             <button 
                                 onClick={() => handleUpdateStatus(order.id, OrderStatus.REJECTED)} 
                                 disabled={processingId !== null}
@@ -443,25 +443,18 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                         </div>
                     )}
 
-                    {/* CASE 2: Đơn REJECTED -> Hiện nút Re-Approve (Duyệt lại) */}
                     {order.status === OrderStatus.REJECTED && (
                         <div className="flex justify-end mt-4 pt-3 border-t border-slate-100">
-                            <div className="flex items-center gap-3 w-full md:w-auto">
-                                <span className="text-xs text-slate-400 italic hidden md:block">
-                                    Mistake? Restore this order:
-                                </span>
-                                <button 
-                                    onClick={() => handleUpdateStatus(order.id, OrderStatus.APPROVED)} 
-                                    disabled={processingId !== null} 
-                                    className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm font-bold rounded hover:bg-blue-100 transition disabled:opacity-50"
-                                >
-                                    {processingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
-                                    Re-Approve
-                                </button>
-                            </div>
+                            <button 
+                                onClick={() => handleUpdateStatus(order.id, OrderStatus.APPROVED)} 
+                                disabled={processingId !== null} 
+                                className="flex items-center justify-center px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 text-sm font-bold rounded hover:bg-blue-100 transition disabled:opacity-50"
+                            >
+                                {processingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                                Re-Approve
+                            </button>
                         </div>
                     )}
-
                     </Card>
                 );
              })}
