@@ -63,11 +63,14 @@ export interface OrderItem {
 export interface Order {
   id: string;
   distributorId: string;
-  distributorName?: string; // Backend populate tên người mua
-  items: OrderItem[];       // Sử dụng OrderItem thay vì CartItem để có giá/tên
+  distributorName?: string;
+  items: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
-  createdAt: string;        // ISO Date string
+  createdAt: string;
+  
+  // --- NEW: Thêm dòng này ---
+  isReceived: boolean; 
 }
 
 export interface ReportDetail {

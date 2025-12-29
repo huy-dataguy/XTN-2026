@@ -4,7 +4,9 @@ import { orderService } from '../../services/orderService';
 import { Card } from '../../components/Card';
 import { 
   Check, X, Loader2, Calendar, Filter, 
-  ShoppingBag, UserCheck, ChevronDown, ChevronUp, Package 
+  ShoppingBag, UserCheck, ChevronDown, ChevronUp, Package,
+  // --- NEW: Import icon cho checkbox ---
+  Square, CheckSquare 
 } from 'lucide-react';
 
 // --- CẤU HÌNH MÀU SẮC CHO TỪNG GROUP ---
@@ -30,16 +32,13 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
   const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
 
-  // --- HELPER QUAN TRỌNG: LẤY ID TỪ ORDER ---
-  // Fix lỗi [object Object]: Kiểm tra xem distributorId là string hay object
+  // --- HELPER: LẤY ID TỪ ORDER ---
   const resolveDistributorId = (order: Order): string => {
     const dist = order.distributorId as any;
     if (!dist) return '';
-    // Nếu là object (đã populate), lấy .id hoặc ._id
     if (typeof dist === 'object') {
         return dist.id || dist._id || '';
     }
-    // Nếu là string
     return String(dist);
   };
 
@@ -53,11 +52,9 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     if (!userGroup) return null;
     const cleanGroup = String(userGroup).trim();
 
-    // Map Value -> Value
     const enumValues = Object.values(DistributorGroup) as string[];
     if (enumValues.includes(cleanGroup)) return cleanGroup;
 
-    // Map Key -> Value
     const enumKey = cleanGroup as keyof typeof DistributorGroup;
     if (DistributorGroup[enumKey]) return DistributorGroup[enumKey];
 
@@ -88,7 +85,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
   }, [orders]);
 
   // --- 2. XỬ LÝ DỮ LIỆU ---
-
   const ordersInWeek = useMemo(() => {
     return orders.filter(o => {
         const date = new Date(o.createdAt);
@@ -99,12 +95,10 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     });
   }, [orders, selectedWeek]);
 
-  // --- TÍNH TOÁN THỐNG KÊ (Đã fix logic lấy ID) ---
-// --- TÍNH TOÁN THỐNG KÊ (Updated: Chỉ tính tiền đơn Approved) ---
+  // --- TÍNH TOÁN THỐNG KÊ ---
   const groupStats = useMemo(() => {
     const stats: Record<string, { revenue: number, count: number }> = {};
     
-    // Khởi tạo
     Object.values(DistributorGroup).forEach(group => {
         stats[group] = { revenue: 0, count: 0 };
     });
@@ -114,20 +108,16 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
       const normalizedGroup = getNormalizedGroup(user?.group);
       
       if (normalizedGroup && stats[normalizedGroup]) {
-        // --- LOGIC MỚI: Chỉ cộng tiền nếu status là APPROVED ---
-        // (Bỏ qua cả PENDING và REJECTED)
         if (order.status === OrderStatus.APPROVED) {
             stats[normalizedGroup].revenue += order.totalAmount;
         }
-
-        // Vẫn đếm vào tổng số lượng đơn để biết nhóm đó có hoạt động (gửi request)
         stats[normalizedGroup].count += 1;
       }
     });
 
     return stats;
   }, [ordersInWeek, distributors]);
-  // --- TÍNH TOÁN USER TÍCH CỰC (Đã fix logic lấy ID) ---
+
   const activityStats = useMemo(() => {
     const activeDistributorIds = new Set(ordersInWeek.map(o => resolveDistributorId(o)));
     const activeUsers = distributors.filter(u => activeDistributorIds.has(u.id));
@@ -135,12 +125,11 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     return { activeUsers, inactiveUsers };
   }, [ordersInWeek, distributors]);
 
-  // --- DISPLAYED ORDERS (Logic Filter mới) ---
+  // --- DISPLAYED ORDERS ---
   const displayedOrders = useMemo(() => {
     let list = ordersInWeek;
 
     if (filterGroup !== 'ALL') {
-      // Map chuẩn hóa Key -> Value
       const groupMap: Record<string, string> = {};
       Object.keys(DistributorGroup).forEach((key) => {
         const value = DistributorGroup[key as keyof typeof DistributorGroup];
@@ -149,10 +138,8 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
       });
 
       list = list.filter(o => {
-          const user = getUserInfo(o); // Dùng hàm lấy User an toàn
-
+          const user = getUserInfo(o);
           if (!user || !user.group) {
-             // Fallback: Nếu không tìm thấy user trong list, thử lấy group trực tiếp từ order (nếu có populate)
              const rawDist = o.distributorId as any;
              if (rawDist && rawDist.group) {
                  const normalized = groupMap[rawDist.group] || rawDist.group;
@@ -160,7 +147,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
              }
              return false;
           }
-
           const normalizedUserGroup = groupMap[user.group] || user.group;
           return String(normalizedUserGroup).trim() === String(filterGroup).trim();
       });
@@ -198,6 +184,21 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     }
   };
 
+  // --- NEW: Handle toggle Received status ---
+  const handleToggleReceived = async (e: React.MouseEvent, order: Order) => {
+    e.stopPropagation(); // Ngăn việc click lan ra Card cha (gây đóng/mở chi tiết)
+    
+    // Đảm bảo Order đã có trường isReceived (từ types.ts bạn đã sửa)
+    const newStatus = !order.isReceived;
+
+    try {
+        await orderService.updateReceivedStatus(order.id, newStatus);
+        onRefresh(); // Refresh lại danh sách để cập nhật UI
+    } catch (error: any) {
+        alert(error.response?.data?.msg || 'Failed to update received status');
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -209,7 +210,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-            {/* Filter Group Dropdown */}
             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
                 <Filter className="w-4 h-4 text-slate-500" />
                 <select 
@@ -224,7 +224,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                 </select>
             </div>
 
-            {/* Week Dropdown */}
             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
                 <Calendar className="w-4 h-4 text-slate-500" />
                 <select 
@@ -322,7 +321,7 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
         ) : (
           <div className="space-y-4">
              {displayedOrders.map(order => {
-                const user = getUserInfo(order); // Lấy user an toàn
+                const user = getUserInfo(order); 
                 const normalizedGroup = getNormalizedGroup(user?.group);
                 const isExpanded = expandedOrderIds.has(order.id);
 
@@ -361,7 +360,27 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
 
                         {/* TOTAL AMOUNT & ACTIONS */}
                         <div className="flex items-center gap-4">
-                             <div className="text-right">
+                            
+                             {/* --- NEW: CHECKBOX RECEIVED --- */}
+                             {order.status === OrderStatus.APPROVED && (
+                                 <div 
+                                    className="flex flex-col items-center gap-1 cursor-pointer group select-none"
+                                    onClick={(e) => handleToggleReceived(e, order)}
+                                    title="Click to toggle received status"
+                                 >
+                                    {order.isReceived ? (
+                                        <CheckSquare className="w-6 h-6 text-blue-600" />
+                                    ) : (
+                                        <Square className="w-6 h-6 text-slate-300 group-hover:text-slate-400" />
+                                    )}
+                                    <span className={`text-[10px] font-bold uppercase ${order.isReceived ? 'text-blue-600' : 'text-slate-400'}`}>
+                                        {order.isReceived ? 'Received' : 'Not Yet'}
+                                    </span>
+                                 </div>
+                             )}
+                             {/* ----------------------------- */}
+
+                             <div className="text-right pl-4 border-l border-slate-100">
                                 <div className="text-xs text-slate-400 uppercase font-semibold">Total</div>
                                 <div className="font-bold text-blue-700 text-xl">${order.totalAmount.toLocaleString()}</div>
                              </div>
