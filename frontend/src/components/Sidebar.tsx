@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, UserRole, ReportStatus, WeeklyReport } from '../types';
-import { Link, useLocation } from 'react-router-dom'; // Import mới
+import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -10,23 +10,22 @@ import {
   History, 
   LogOut, 
   Users, 
-  UserCircle 
+  UserCircle,
+  CheckSquare // 1. Import icon mới
 } from 'lucide-react';
 
 interface SidebarProps {
   user: User;
-  reports?: WeeklyReport[]; // Cho phép undefined để tránh lỗi khi chưa load
+  reports?: WeeklyReport[];
   onLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ user, reports = [], onLogout }) => {
-  const location = useLocation(); // Lấy URL hiện tại
+  const location = useLocation();
   const currentPath = location.pathname;
 
-  // Đếm số báo cáo PENDING
   const pendingReportsCount = reports.filter(r => r.status === ReportStatus.PENDING).length;
 
-  // Hàm kiểm tra active dựa trên URL
   const isActive = (path: string) => {
     if (path === '/' && currentPath === '/') return true;
     if (path !== '/' && currentPath.startsWith(path)) return true;
@@ -48,7 +47,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, reports = [], onLogout }
         <Icon className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} /> 
         <span className="flex-1 text-left font-medium">{label}</span>
         
-        {/* Badge hiển thị số lượng */}
         {badgeCount > 0 && (
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             active ? 'bg-white text-blue-600' : 'bg-red-500 text-white'
@@ -82,6 +80,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, reports = [], onLogout }
             <NavItem to="/users" icon={Users} label="Accounts" />
             <NavItem to="/products" icon={Package} label="Products" />
             <NavItem to="/orders" icon={ShoppingCart} label="Orders" />
+            
+            {/* 👇 2. Thêm mục Check Received vào đây */}
+            <NavItem to="/received-check" icon={CheckSquare} label="Check Received" />
+            
             <NavItem to="/reports" icon={ClipboardList} label="Approve Reports" badgeCount={pendingReportsCount} />
           </>
         ) : (
