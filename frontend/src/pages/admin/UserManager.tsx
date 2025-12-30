@@ -130,7 +130,7 @@ export const UserManager: React.FC<UserManagerProps> = ({
         
         // --- SỬA LẠI PHẦN GỌI API ---
         const response = await axios.post(
-            `http://localhost:5000/api/auth/impersonate/${targetUserId}`,
+            `https://be-vvnspkt-xtn2026.vercel.app/api/auth/impersonate/${targetUserId}`,
             {}, // Body rỗng
             { 
                 headers: { 
