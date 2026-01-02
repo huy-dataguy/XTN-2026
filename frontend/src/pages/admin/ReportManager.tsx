@@ -91,11 +91,35 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
     });
     return stats;
   }, [filteredReportsByDate, distributors]);
+const missingReporters = useMemo(() => {
+  // 1. Lấy danh sách ID của những người đã nộp báo cáo "Hợp lệ"
+  // Hợp lệ = Đang chờ duyệt (PENDING) HOẶC Đã duyệt (APPROVED)
+  // Nếu báo cáo bị REJECTED -> Sẽ bị loại khỏi danh sách này và hiện ở mục "Missing"
+  const submittedIds = new Set(
+    filteredReportsByDate
+      .filter(r => r.status !== ReportStatus.REJECTED) // <--- CHÌA KHÓA Ở ĐÂY
+      .map(r => {
+        const dId = r.distributorId as any;
+        // Chuẩn hóa ID về String để so sánh chính xác
+        return typeof dId === 'object' ? String(dId._id || dId.id) : String(dId);
+      })
+  );
 
-  const missingReporters = useMemo(() => {
-    const submittedIds = new Set(filteredReportsByDate.map(r => r.distributorId));
-    return distributors.filter(u => !submittedIds.has(u.id) && (filterGroup === 'ALL' || u.group === filterGroup));
-  }, [distributors, filteredReportsByDate, filterGroup]);
+  // 2. Lọc những người chưa có báo cáo hợp lệ trong khoảng thời gian đã chọn
+  return distributors.filter(u => {
+    const userId = String(u.id || (u as any)._id);
+    
+    // Kiểm tra xem ID này có nằm trong danh sách đã nộp không
+    const hasSubmitted = submittedIds.has(userId);
+    
+    // Lọc theo Group đang chọn trên giao diện
+    const matchesGroup = filterGroup === 'ALL' || u.group === filterGroup;
+
+    // Trả về true nếu chưa nộp (hoặc báo cáo bị rejected) và đúng nhóm
+    return !hasSubmitted && matchesGroup;
+  });
+}, [distributors, filteredReportsByDate, filterGroup]);
+
 
   const handleUpdateStatus = async (id: string, status: ReportStatus) => {
     if (status === ReportStatus.REJECTED && !confirm('Reject this report?')) return;
