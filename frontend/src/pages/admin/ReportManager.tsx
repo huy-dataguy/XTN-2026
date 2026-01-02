@@ -2,7 +2,21 @@ import React, { useState, useMemo } from 'react';
 import { WeeklyReport, ReportStatus, DistributorGroup, User, Order } from '../../types';
 import { reportService } from '../../services/reportService';
 import { Card } from '../../components/Card';
-import { Check, X, Loader2, Calendar, Filter, AlertCircle, User as UserIcon } from 'lucide-react';
+import { 
+  Check, X, Loader2, Calendar, Filter, AlertCircle, 
+  User as UserIcon, ArrowRight, BarChart3, Package, DollarSign,
+  TrendingDown, History
+} from 'lucide-react';
+
+const GROUP_COLORS: Record<string, string> = {
+  [DistributorGroup.TaiChinh]: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+  [DistributorGroup.VanPhong]: 'bg-blue-50 border-blue-200 text-blue-800',
+  [DistributorGroup.SuKien]: 'bg-purple-50 border-purple-200 text-purple-800',
+  [DistributorGroup.TruyenThong]: 'bg-green-50 border-green-200 text-green-800',
+  [DistributorGroup.HauCan]: 'bg-red-50 border-red-200 text-red-800',
+  [DistributorGroup.BanBep]: 'bg-orange-50 border-orange-200 text-orange-800',
+  'DEFAULT': 'bg-gray-50 border-gray-200 text-gray-800'
+};
 
 interface ReportManagerProps {
   reports: WeeklyReport[];
@@ -11,366 +25,285 @@ interface ReportManagerProps {
   onRefresh: () => void;
 }
 
-export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distributors, orders, onRefresh }) => {
+export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distributors, onRefresh }) => {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filterGroup, setFilterGroup] = useState<string>('ALL');
+  const [showMissing, setShowMissing] = useState<boolean>(false);
 
-  // --- 1. LOGIC NGÀY THÁNG (ĐÃ SỬA: Dùng Local Time để tránh lệch múi giờ) ---
-  const getMondayDateString = (date: Date) => {
-    const d = new Date(date);
+  // --- 1. DATE RANGE LOGIC ---
+  const formatDateLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getMondayOfCurrentWeek = () => {
+    const d = new Date();
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Tính về thứ 2
-    d.setDate(diff);
-    
-    // Format thủ công YYYY-MM-DD theo giờ địa phương (không dùng toISOString vì sẽ bị lệch sang UTC)
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const dayOfMonth = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${dayOfMonth}`;
+    const diff = day === 0 ? 6 : day - 1;
+    d.setDate(d.getDate() - diff);
+    return formatDateLocal(d);
   };
 
-  // Hàm hiển thị range: Thứ 2 - Chủ Nhật
-  const getWeekRangeDisplay = (mondayStr: string) => {
-    const monday = new Date(mondayStr);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6); // Cộng thêm 6 ngày để ra Chủ Nhật
+  const [startDate, setStartDate] = useState<string>(getMondayOfCurrentWeek());
+  const [endDate, setEndDate] = useState<string>(formatDateLocal(new Date()));
 
-    const format = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`;
-    return `${format(monday)} - ${format(sunday)}`;
-  };
+  // --- 2. FILTERING ---
+  const filteredReportsByDate = useMemo(() => {
+    const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate); end.setHours(23, 59, 59, 999);
 
-  const currentWeekStart = getMondayDateString(new Date());
-  const [selectedWeek, setSelectedWeek] = useState<string>(currentWeekStart);
-
-  // Tạo danh sách các tuần có trong báo cáo + tuần hiện tại
-  const availableWeeks = useMemo(() => {
-    const weeks = new Set<string>();
-    // Luôn thêm tuần hiện tại
-    weeks.add(currentWeekStart);
-    // Thêm các tuần từ dữ liệu cũ
-    reports.forEach(r => {
-        // Cắt chuỗi để lấy phần YYYY-MM-DD nếu dữ liệu có giờ
-        const dateStr = r.weekStartDate.split('T')[0]; 
-        weeks.add(dateStr);
+    return reports.filter(r => {
+      const reportDate = new Date(r.weekStartDate);
+      return reportDate >= start && reportDate <= end;
     });
-    // Sắp xếp giảm dần (mới nhất lên đầu)
-    return Array.from(weeks).sort().reverse();
-  }, [reports, currentWeekStart]);
+  }, [reports, startDate, endDate]);
 
-  // --- 2. LỌC DỮ LIỆU ---
-  
-  // Lọc báo cáo theo Tuần đã chọn
-  const reportsInWeek = useMemo(() => {
-    return reports.filter(r => r.weekStartDate.startsWith(selectedWeek));
-  }, [reports, selectedWeek]);
-
-  // Tính toán Thống kê Group
-  const groupStats = useMemo(() => {
-    const stats = {
-      [DistributorGroup.TaiChinh]: { revenue: 0, sold: 0, count: 0 },
-      [DistributorGroup.VanPhong]: { revenue: 0, sold: 0, count: 0 },
-      [DistributorGroup.SuKien]: { revenue: 0, sold: 0, count: 0 },
-      [DistributorGroup.TruyenThong]: { revenue: 0, sold: 0, count: 0 },
-      [DistributorGroup.HauCan]: { revenue: 0, sold: 0, count: 0 },
-      [DistributorGroup.BanBep]: { revenue: 0, sold: 0, count: 0 },
-    };
-
-    reportsInWeek.forEach(r => {
-      const group = r.distributorGroup || DistributorGroup.TaiChinh;
-      if (stats[group]) {
-        stats[group].revenue += r.totalRevenue;
-        stats[group].sold += r.totalSold;
-        stats[group].count += 1;
-      }
-    });
-
-    return stats;
-  }, [reportsInWeek]);
-
-  // Lọc danh sách hiển thị theo Group
   const displayedReports = useMemo(() => {
-    let list = reportsInWeek;
+    let list = filteredReportsByDate;
     if (filterGroup !== 'ALL') {
-      list = list.filter(r => r.distributorGroup === filterGroup);
+      list = list.filter(r => {
+        const user = distributors.find(u => u.id === r.distributorId);
+        return (r.distributorGroup || user?.group) === filterGroup;
+      });
     }
-    // Ưu tiên hiện Pending lên đầu
     return list.sort((a, b) => {
       if (a.status === ReportStatus.PENDING && b.status !== ReportStatus.PENDING) return -1;
-      if (a.status !== ReportStatus.PENDING && b.status === ReportStatus.PENDING) return 1;
-      return 0;
+      return new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime();
     });
-  }, [reportsInWeek, filterGroup]);
+  }, [filteredReportsByDate, filterGroup, distributors]);
 
-  // Tính người chưa nộp báo cáo
+  const groupStats = useMemo(() => {
+    const stats: Record<string, { revenue: number, sold: number, count: number }> = {};
+    Object.values(DistributorGroup).forEach(g => stats[g] = { revenue: 0, sold: 0, count: 0 });
+
+    filteredReportsByDate.forEach(r => {
+      const user = distributors.find(u => u.id === r.distributorId);
+      const group = r.distributorGroup || user?.group;
+      if (group && stats[group as string]) {
+        if (r.status === ReportStatus.APPROVED) {
+          stats[group as string].revenue += r.totalRevenue;
+          stats[group as string].sold += r.totalSold;
+        }
+        stats[group as string].count += 1;
+      }
+    });
+    return stats;
+  }, [filteredReportsByDate, distributors]);
+
   const missingReporters = useMemo(() => {
-    const submittedIds = new Set(reportsInWeek.map(r => r.distributorId));
-    
-    return distributors.filter(u => {
-      if (submittedIds.has(u.id)) return false;
-      if (filterGroup !== 'ALL' && u.group !== filterGroup) return false;
-      return true;
-    });
-  }, [distributors, reportsInWeek, filterGroup]);
+    const submittedIds = new Set(filteredReportsByDate.map(r => r.distributorId));
+    return distributors.filter(u => !submittedIds.has(u.id) && (filterGroup === 'ALL' || u.group === filterGroup));
+  }, [distributors, filteredReportsByDate, filterGroup]);
 
-  // --- XỬ LÝ API ---
   const handleUpdateStatus = async (id: string, status: ReportStatus) => {
-    if (status === ReportStatus.REJECTED && !confirm('Are you sure you want to reject this report?')) {
-      return;
-    }
+    if (status === ReportStatus.REJECTED && !confirm('Reject this report?')) return;
     setProcessingId(id);
     try {
       await reportService.updateStatus(id, status);
       onRefresh();
     } catch (error: any) {
-      alert(error.response?.data?.msg || 'Failed to update report status');
+      alert(error.response?.data?.msg || 'Update failed');
     } finally {
       setProcessingId(null);
     }
   };
 
-  const getGroupColor = (group?: string) => {
-    switch(group) {
-      case DistributorGroup.TaiChinh: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case DistributorGroup.VanPhong: return 'bg-slate-100 text-slate-800 border-slate-200';
-      case DistributorGroup.SuKien: return 'bg-purple-100 text-purple-800 border-purple-200';
-      case DistributorGroup.TruyenThong: return 'bg-green-100 text-green-800 border-green-200';
-      case DistributorGroup.HauCan: return 'bg-red-100 text-red-800 border-red-200';
-      case DistributorGroup.BanBep: return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
     <div className="space-y-6">
-      
-      {/* HEADER & DATE FILTER */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      {/* HEADER SECTION (Same as OrderManager) */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Weekly Performance Review</h2>
-          <p className="text-sm text-slate-500">
-             Reviewing reports for: <span className="font-bold text-blue-600">{getWeekRangeDisplay(selectedWeek)}</span>
-          </p>
+          <h2 className="text-2xl font-bold text-slate-800">Distributor Reports</h2>
+          <p className="text-sm text-slate-500">Audit stock flow and sales performance.</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-200">
-          <Calendar className="w-5 h-5 text-slate-500" />
-          <span className="text-sm font-medium text-slate-700">Select Week:</span>
-          <select 
-            value={selectedWeek}
-            onChange={(e) => setSelectedWeek(e.target.value)}
-            className="bg-white border border-slate-300 text-slate-700 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none font-medium min-w-[200px]"
-          >
-            {availableWeeks.map(week => (
-              <option key={week} value={week}>
-                {getWeekRangeDisplay(week)} {week === currentWeekStart ? '(Current)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* GROUP STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[DistributorGroup.TaiChinh, DistributorGroup.VanPhong, DistributorGroup.SuKien, DistributorGroup.TruyenThong, DistributorGroup.HauCan, DistributorGroup.BanBep].map(group => {
-          const isActive = filterGroup === group;
-          const stat = groupStats[group];
-          
-          return (
-            <div 
-              key={group} 
-              onClick={() => setFilterGroup(isActive ? 'ALL' : group)}
-              className={`relative p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-1 ${
-                isActive ? 'ring-2 ring-offset-1 ring-blue-500 shadow-md' : 'opacity-80 hover:opacity-100'
-              } ${
-                group === DistributorGroup.TaiChinh ? 'bg-yellow-50 border-yellow-200' :
-                group === DistributorGroup.VanPhong ? 'bg-slate-50 border-slate-200' :
-                group === DistributorGroup.SuKien ? 'bg-purple-50 border-purple-200' :
-                group === DistributorGroup.TruyenThong ? 'bg-green-50 border-green-200' :
-                group === DistributorGroup.HauCan ? 'bg-red-50 border-red-200' :
-                'bg-blue-50 border-blue-200'
-              }`}
-            >
-              {isActive && <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>}
-              
-              <div className="flex justify-between items-center mb-3">
-                <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                   group === DistributorGroup.TaiChinh ? 'bg-yellow-200 text-yellow-800' :
-                   group === DistributorGroup.VanPhong ? 'bg-slate-200 text-slate-800' :
-                   group === DistributorGroup.SuKien ? 'bg-purple-200 text-purple-800' :
-                   group === DistributorGroup.TruyenThong ? 'bg-green-200 text-green-800' :
-                   group === DistributorGroup.HauCan ? 'bg-red-200 text-red-800' :
-                   'bg-blue-200 text-blue-800'
-                }`}>
-                  {group}
-                </span>
-                <span className="text-xs text-slate-500 font-bold">{stat.count} Reports</span>
-              </div>
-              
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Revenue</p>
-                  <p className="text-lg font-bold text-slate-800">${stat.revenue.toLocaleString()}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Sold</p>
-                  <p className="text-lg font-bold text-slate-800">{stat.sold}</p>
-                </div>
-              </div>
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+            <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 grow xl:grow-0">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <select 
+                    value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)}
+                    className="bg-transparent text-slate-700 text-sm outline-none font-medium w-full"
+                >
+                    <option value="ALL">All Groups</option>
+                    {Object.values(DistributorGroup).map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
             </div>
-          );
-        })}
+
+            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 grow xl:grow-0">
+                <div className="flex items-center gap-2 px-2 border-r border-slate-200">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-bold text-slate-500 uppercase">Range</span>
+                </div>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 outline-none" />
+                <ArrowRight className="w-3 h-3 text-slate-400" />
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 outline-none" />
+            </div>
+        </div>
       </div>
 
-      {/* DANH SÁCH BÁO CÁO */}
-      <div className="space-y-4 pt-2">
-        <div className="flex justify-between items-center px-1">
-          <h3 className="font-bold text-slate-700 flex items-center gap-2">
-            <Filter className="w-4 h-4" /> 
-            Submitted Reports ({displayedReports.length})
-            {filterGroup !== 'ALL' && <span className="text-sm font-normal text-slate-500 ml-2 bg-slate-100 px-2 rounded-full">Filter: {filterGroup}</span>}
-          </h3>
-          {filterGroup !== 'ALL' && (
-            <button onClick={() => setFilterGroup('ALL')} className="text-xs text-blue-600 hover:underline">Clear Filter</button>
-          )}
-        </div>
+      {/* STATS ROW */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+         {Object.values(DistributorGroup).map(group => {
+            const isActive = filterGroup === group;
+            const stat = groupStats[group] || { revenue: 0, sold: 0, count: 0 };
+            return (
+              <div key={group} onClick={() => setFilterGroup(isActive ? 'ALL' : group)} className={`p-3 rounded-xl border cursor-pointer transition-all ${isActive ? 'ring-2 ring-blue-500 shadow-md' : 'opacity-80'} ${GROUP_COLORS[group]}`}>
+                 <div className="font-bold text-[10px] uppercase mb-1">{group}</div>
+                 <div className="text-lg font-bold">${stat.revenue.toLocaleString()}</div>
+                 <div className="text-[10px] mt-1 opacity-70">{stat.count} Reports</div>
+              </div>
+            );
+         })}
+      </div>
 
-        {displayedReports.length === 0 && (
-          <div className="text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed flex flex-col items-center">
-            <Calendar className="w-10 h-10 mb-2 opacity-20" />
-            <p>No reports found for week <span className="font-bold">{getWeekRangeDisplay(selectedWeek)}</span>.</p>
-          </div>
-        )}
-        
-        {displayedReports.map(report => (
-          <Card 
-            key={report.id} 
-            className={`flex flex-col gap-4 border-l-4 transition-all hover:shadow-md ${
-              report.status === ReportStatus.PENDING ? 'border-l-yellow-400' : 
-              report.status === ReportStatus.APPROVED ? 'border-l-green-500' : 'border-l-red-500'
-            }`}
-          >
-            {/* Header Card */}
-            <div className="flex flex-col md:flex-row justify-between md:items-start gap-4">
-               <div>
-                 <div className="flex items-center gap-2 mb-1">
-                   <h3 className="font-bold text-lg text-slate-800">{report.distributorName || 'Unknown User'}</h3>
-                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${getGroupColor(report.distributorGroup)}`}>
-                     {report.distributorGroup || 'N/A'}
-                   </span>
-                 </div>
-                 <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <span className={`font-bold uppercase text-xs px-2 py-0.5 rounded ${
-                      report.status === ReportStatus.PENDING ? 'bg-yellow-100 text-yellow-700' :
-                      report.status === ReportStatus.APPROVED ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
+      {/* LIST OF REPORTS */}
+      <div className="space-y-4">
+        {displayedReports.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl border border-dashed text-slate-400">No reports found.</div>
+        ) : (
+          displayedReports.map(report => (
+            <Card key={report.id} className={`border-l-4 transition-all hover:shadow-md ${report.status === ReportStatus.PENDING ? 'border-l-yellow-400' : report.status === ReportStatus.APPROVED ? 'border-l-green-500' : 'border-l-red-500'}`}>
+              
+              {/* Report Header Info */}
+              <div className="flex flex-col lg:flex-row justify-between gap-4 mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="font-bold text-slate-800 text-lg">{report.distributorName}</h3>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border ${GROUP_COLORS[report.distributorGroup || 'DEFAULT']}`}>
+                      {report.distributorGroup || 'N/A'}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${report.status === ReportStatus.APPROVED ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {report.status}
                     </span>
-                    <span>• {getWeekRangeDisplay(report.weekStartDate)}</span>
-                 </div>
-               </div>
-               
-               {/* Summary Stats in Card */}
-               <div className="flex gap-6 text-right bg-slate-50 p-2 rounded-lg border border-slate-100">
-                 <div>
-                   <p className="text-xl font-bold text-emerald-600">${report.totalRevenue.toLocaleString()}</p>
-                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Revenue</p>
-                 </div>
-                 <div className="border-l border-slate-200 pl-4">
-                   <p className="text-xl font-bold text-blue-600">{report.totalSold}</p>
-                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Items Sold</p>
-                 </div>
-               </div>
-            </div>
-            
-            {/* Details Table */}
-            <div className="bg-white rounded-lg text-sm border border-slate-200 overflow-hidden">
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left">
-                    <thead className="bg-slate-50">
-                       <tr className="text-slate-500">
-                         <th className="px-4 py-2 font-medium">Product</th>
-                         <th className="px-4 py-2 text-right font-medium">Recv</th>
-                         <th className="px-4 py-2 text-right font-medium">Sold</th>
-                         <th className="px-4 py-2 text-right font-medium">Dmg</th>
-                         <th className="px-4 py-2 text-right font-medium">Rem</th>
-                         <th className="px-4 py-2 text-right font-medium">Rev</th>
-                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {report.details.map((d, idx) => (
-                        <tr key={idx}>
-                          <td className="px-4 py-2 font-medium text-slate-700">{d.productName}</td>
-                          <td className="px-4 py-2 text-right text-slate-400">{d.quantityReceived}</td>
-                          <td className="px-4 py-2 text-right font-bold text-slate-700">{d.quantitySold}</td>
-                          <td className="px-4 py-2 text-right text-red-500">{d.quantityDamaged > 0 ? d.quantityDamaged : '-'}</td>
-                          <td className="px-4 py-2 text-right text-blue-600 font-medium">{d.remainingStock}</td>
-                          <td className="px-4 py-2 text-right font-medium text-emerald-600">${d.revenue.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                 </table>
-               </div>
-               {report.notes && (
-                <div className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
-                  <span className="font-bold text-xs uppercase text-slate-500 mt-0.5">Note:</span>
-                  <p className="italic text-slate-600 text-sm">"{report.notes}"</p>
+                  </div>
+                  <div className="text-xs text-slate-500 flex items-center gap-3">
+                    <span className="flex items-center gap-1 font-medium"><Calendar className="w-3 h-3"/> Tuần báo cáo: {new Date(report.weekStartDate).toLocaleDateString('en-GB')}</span>
+                    <span className="text-slate-300">|</span>
+                    <span className="text-blue-600 font-semibold">ID: #{report.id.slice(-6).toUpperCase()}</span>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {report.status === ReportStatus.PENDING && (
-              <div className="flex justify-end space-x-3 pt-2">
-                 <button 
-                    onClick={() => handleUpdateStatus(report.id, ReportStatus.REJECTED)} 
-                    disabled={processingId !== null}
-                    className="flex items-center px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 text-sm font-medium"
-                 >
-                   {processingId === report.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <X className="w-4 h-4 mr-2"/>} 
-                   Reject
-                 </button>
-                 <button 
-                    onClick={() => handleUpdateStatus(report.id, ReportStatus.APPROVED)} 
-                    disabled={processingId !== null}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition shadow-sm disabled:opacity-50 text-sm font-medium"
-                 >
-                   {processingId === report.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Check className="w-4 h-4 mr-2"/>}
-                   Approve & Sync
-                 </button>
+                {/* Quick Summary Badges */}
+                <div className="flex gap-2">
+                  <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 text-center">
+                    <div className="text-[10px] text-blue-400 uppercase font-bold">Bán ra</div>
+                    <div className="text-lg font-bold text-blue-600">{report.totalSold}</div>
+                  </div>
+                  <div className="bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 text-center">
+                    <div className="text-[10px] text-emerald-400 uppercase font-bold">Doanh thu</div>
+                    <div className="text-lg font-bold text-emerald-600">${report.totalRevenue.toLocaleString()}</div>
+                  </div>
+                </div>
               </div>
-            )}
-          </Card>
-        ))}
+
+              {/* BẢNG ĐỐI SOÁT CHI TIẾT (Đồng bộ với logic User) */}
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-600 text-[10px] uppercase tracking-wider font-bold">
+                    <tr>
+                      <th className="px-4 py-3">Sản phẩm</th>
+                      <th className="px-3 py-3 text-center bg-slate-100/50" title="Tồn kho từ báo cáo trước">Tồn cũ</th>
+                      <th className="px-3 py-3 text-center bg-blue-50/50" title="Hàng nhập trong tuần này">Nhập mới</th>
+                      <th className="px-3 py-3 text-center font-bold text-blue-800 bg-blue-100/50">Tổng có</th>
+                      <th className="px-3 py-3 text-center text-slate-800">Đã bán</th>
+                      <th className="px-3 py-3 text-center text-red-500">Lỗi/Hỏng</th>
+                      <th className="px-3 py-3 text-center font-bold text-emerald-700 bg-emerald-50">Tồn cuối</th>
+                      <th className="px-4 py-3 text-right">Doanh thu</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {report.details.map((d, i) => {
+                      // Logic: Trong User Page, quantityReceived = Total Available (Prev + InWeek)
+                      // Do database hiện tại đang lưu quantityReceived là tổng, nên ta hiển thị 
+                      // cột này như là "Tổng Có" để khớp với logic User.
+                      return (
+                        <tr key={i} className="hover:bg-slate-50/50 transition">
+                          <td className="px-4 py-3 font-bold text-slate-700">{d.productName}</td>
+                          
+                          {/* Các cột bổ trợ (nếu Backend có hỗ trợ tách field, nếu không ta hiển thị dấu - hoặc tính toán) */}
+                          <td className="px-3 py-3 text-center text-slate-400 font-medium italic">-</td>
+                          <td className="px-3 py-3 text-center text-blue-400 font-medium italic">-</td>
+                          
+                          {/* quantityReceived của User Page thực chất là Tổng Có */}
+                          <td className="px-3 py-3 text-center font-bold text-blue-700 bg-blue-50/30">
+                            {d.quantityReceived}
+                          </td>
+                          
+                          <td className="px-3 py-3 text-center font-bold">{d.quantitySold}</td>
+                          <td className="px-3 py-3 text-center text-red-500 font-medium">{d.quantityDamaged || 0}</td>
+                          
+                          <td className="px-3 py-3 text-center font-bold bg-emerald-50/50 text-emerald-700">
+                            {d.remainingStock}
+                          </td>
+                          
+                          <td className="px-4 py-3 text-right font-bold text-emerald-600">
+                            ${d.revenue.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Notes & Actions */}
+              <div className="mt-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-slate-500 italic bg-slate-50 px-3 py-2 rounded-lg w-full md:w-auto">
+                   <AlertCircle className="w-4 h-4 text-slate-400" />
+                   <span>{report.notes ? `Ghi chú: ${report.notes}` : 'Không có ghi chú'}</span>
+                </div>
+
+                {report.status === ReportStatus.PENDING && (
+                  <div className="flex gap-2 w-full md:w-auto">
+                    <button 
+                      onClick={() => handleUpdateStatus(report.id, ReportStatus.REJECTED)}
+                      disabled={processingId === report.id}
+                      className="flex-1 px-6 py-2 border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                    >Từ chối</button>
+                    <button 
+                      onClick={() => handleUpdateStatus(report.id, ReportStatus.APPROVED)}
+                      disabled={processingId === report.id}
+                      className="flex-[2] px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-lg shadow-green-100 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {processingId === report.id ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
+                      Duyệt & Chốt kho
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))
+        )}
       </div>
 
-      {/* --- PHẦN NGƯỜI CHƯA BÁO CÁO --- */}
+      {/* MISSING REPORTS SECTION (Bottom) */}
       {missingReporters.length > 0 && (
-        <div className="mt-8 pt-8 border-t-2 border-slate-200">
-           <h3 className="text-lg font-bold text-red-600 flex items-center mb-4">
-              <AlertCircle className="w-5 h-5 mr-2" />
-              Missing Reports ({missingReporters.length})
-           </h3>
-           <p className="text-sm text-slate-500 mb-4">
-             The following distributors have not submitted a report for the week: <span className="font-bold">{getWeekRangeDisplay(selectedWeek)}</span>.
-           </p>
-           
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {missingReporters.map(user => (
-                <div key={user.id} className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-white border border-red-100 flex items-center justify-center text-red-500">
-                         <UserIcon className="w-5 h-5" />
-                      </div>
-                      <div>
-                         <p className="font-bold text-slate-800">{user.name}</p>
-                         <p className="text-xs text-red-600 font-medium uppercase">{user.group} Partner</p>
-                      </div>
-                   </div>
-                   <div className="text-right">
-                      <span className="text-xs font-bold text-red-500 bg-white px-2 py-1 rounded border border-red-100">Not Submitted</span>
-                   </div>
-                </div>
-              ))}
+        <div className="mt-8 border-t pt-6">
+           <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-red-600 flex items-center gap-2 uppercase text-sm tracking-wider">
+                 <AlertCircle className="w-5 h-5" /> Danh sách chưa nộp báo cáo ({missingReporters.length})
+              </h3>
+              <button onClick={() => setShowMissing(!showMissing)} className="text-xs text-blue-600 font-bold hover:underline">
+                {showMissing ? 'Thu gọn' : 'Xem danh sách'}
+              </button>
            </div>
+           {showMissing && (
+             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {missingReporters.map(u => (
+                  <div key={u.id} className="p-3 bg-red-50 border border-red-100 rounded-lg flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-red-400 shadow-sm">
+                      <UserIcon className="w-4 h-4" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="font-bold text-slate-800 text-xs truncate">{u.name}</p>
+                      <p className="text-[10px] text-red-500 font-bold uppercase">{u.group}</p>
+                    </div>
+                  </div>
+                ))}
+             </div>
+           )}
         </div>
       )}
     </div>
