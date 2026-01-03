@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const User = require('../models/User');
-
+const bcrypt = require('bcryptjs');
 // GET /api/users/distributors - Lấy danh sách tất cả người phân phối
 router.get('/distributors', auth, async (req, res) => {
   try {
@@ -61,5 +61,41 @@ router.delete('/:id', auth, async (req, res) => {
     res.json({ msg: 'User deleted' });
   } catch (err) { res.status(500).send('Server Error'); }
 });
+
+// PUT /api/users/:id/reset-password
+// Admin đổi mật khẩu cho user bất kỳ
+router.put('/:id/reset-password', auth, async (req, res) => {
+  try {
+    // 1. Kiểm tra quyền Admin
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ msg: 'Access denied. Admins only.' });
+    }
+
+    const { newPassword } = req.body;
+    
+    // Validate cơ bản
+    if (!newPassword || newPassword.length < 3) {
+      return res.status(400).json({ msg: 'Mật khẩu phải có ít nhất 3 ký tự' });
+    }
+
+    // 2. Tìm User
+    let user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+
+    // 3. Mã hóa mật khẩu mới
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    // 4. Lưu lại
+    await user.save();
+
+    res.json({ msg: `Đổi mật khẩu thành công cho user: ${user.username}` });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+
 
 module.exports = router;
