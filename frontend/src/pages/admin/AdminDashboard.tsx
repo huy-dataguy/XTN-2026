@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { WeeklyReport, Order, Product, DistributorGroup, ReportStatus } from '../../types';
 import { Card, StatCard } from '../../components/Card';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -15,30 +15,33 @@ const LINE_COLORS = ['#2563eb', '#db2777', '#ea580c', '#16a34a', '#7c3aed'];
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders }) => {
   const [distributorFilter, setDistributorFilter] = useState<string>('ALL');
 
-  // --- LOGIC LỌC DỮ LIỆU ---
-  const getFilteredReports = () => {
-    if (distributorFilter === 'ALL') return reports;
-    return reports.filter(r => r.distributorGroup === distributorFilter);
-  };
-
-  const filteredReports = getFilteredReports();
-  
-  // Tính toán tổng quan
-  const totalRevenue = filteredReports.reduce((sum, r) => sum + (r.totalRevenue || 0), 0);
-  const totalSold = filteredReports.reduce((sum, r) => sum + (r.totalSold || 0), 0);
+  // 1. Tính số lượng Report đang chờ xử lý (Tính trên TẤT CẢ, không quan tâm Filter Group)
   const pendingReports = reports.filter(r => r.status === ReportStatus.PENDING).length;
+
+  // 2. Lọc danh sách "HỢP LỆ" để vẽ biểu đồ và tính doanh thu
+  // Điều kiện: Phải là APPROVED + Thỏa mãn bộ lọc Group
+  const validReports = useMemo(() => {
+    return reports.filter(r => {
+      const isApproved = r.status === ReportStatus.APPROVED; // <--- QUAN TRỌNG: Chỉ lấy đã duyệt
+      const matchesGroup = distributorFilter === 'ALL' || r.distributorGroup === distributorFilter;
+      return isApproved && matchesGroup;
+    });
+  }, [reports, distributorFilter]);
+
+  // 3. Tính toán tổng quan dựa trên danh sách hợp lệ
+  const totalRevenue = validReports.reduce((sum, r) => sum + (r.totalRevenue || 0), 0);
+  const totalSold = validReports.reduce((sum, r) => sum + (r.totalSold || 0), 0);
 
   // --- CHUẨN BỊ DỮ LIỆU BIỂU ĐỒ ---
   const getChartData = () => {
     // Sắp xếp theo ngày tăng dần
-    const sorted = [...filteredReports].sort((a, b) => new Date(a.weekStartDate).getTime() - new Date(b.weekStartDate).getTime());
+    const sorted = [...validReports].sort((a, b) => new Date(a.weekStartDate).getTime() - new Date(b.weekStartDate).getTime());
     
     const groupedByWeek: Record<string, any> = {};
 
     sorted.forEach(r => {
-      // Format ngày (VD: "25 Thg 12")
       const dateObj = new Date(r.weekStartDate);
-      const weekLabel = dateObj.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }); // Chuyển format ngày sang tiếng Việt
+      const weekLabel = dateObj.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' });
 
       if (!groupedByWeek[weekLabel]) groupedByWeek[weekLabel] = { name: weekLabel };
       
@@ -55,18 +58,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
 
   const chartData = getChartData();
   
-  // Xác định các đường (Lines) sẽ vẽ
+  // Xác định các đường (Lines) sẽ vẽ dựa trên dữ liệu hợp lệ
   const chartKeys = distributorFilter === 'ALL' 
-    ? Object.values(DistributorGroup) 
-    : Array.from(new Set(getFilteredReports().map(r => r.distributorName || 'Không xác định')));
+    ? Object.values(DistributorGroup) // Nếu xem tất cả thì hiện các Group
+    : Array.from(new Set(validReports.map(r => r.distributorName || 'Không xác định'))); // Nếu xem chi tiết 1 group thì hiện tên người
 
   return (
     <div className="space-y-6">
+      {/* HEADER & FILTER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-slate-200 gap-4">
         <div>
-          {/* Đã dịch tiêu đề */}
           <h2 className="text-2xl font-bold text-slate-800">Phân Tích Tài Chính</h2>
-          <p className="text-sm text-slate-500">Tổng quan hiệu suất kinh doanh</p>
+          <p className="text-sm text-slate-500">Tổng quan hiệu suất kinh doanh (Đã duyệt)</p>
         </div>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-slate-500 font-medium">Lọc theo Ban:</span>
@@ -75,22 +78,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
             value={distributorFilter}
             onChange={(e) => setDistributorFilter(e.target.value)}
           >
-            {/* Đã dịch option mặc định */}
             <option value="ALL">Tất cả (So sánh các Ban)</option>
-            <option value={DistributorGroup.TaiChinh}>Tài Chính</option>
-            <option value={DistributorGroup.VanPhong}>Văn Phòng</option>
-            <option value={DistributorGroup.SuKien}>Sự Kiện</option>
-            <option value={DistributorGroup.TruyenThong}>Truyền Thông</option>
-            <option value={DistributorGroup.HauCan}>Hậu Cần</option>
-            <option value={DistributorGroup.BanBep}>Ban Bếp</option>
+            {Object.values(DistributorGroup).map(group => (
+                <option key={group} value={group}>{group}</option>
+            ))}
           </select>
         </div>
       </div>
 
+      {/* STAT CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Đã dịch Label các thẻ chỉ số */}
         <StatCard 
-            label="Tổng Doanh Thu" 
+            label="Tổng Doanh Thu (Thực tế)" 
             value={`$${totalRevenue.toLocaleString()}`} 
             icon={<DollarSign className="w-6 h-6 text-emerald-600" />} 
             color="text-emerald-600" 
@@ -109,6 +108,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
         />
       </div>
 
+      {/* CHART */}
       {chartData.length > 0 ? (
         <Card title={distributorFilter === 'ALL' ? "Xu Hướng Doanh Thu Theo Ban" : "Chi Tiết Hiệu Suất Thành Viên"}>
             <div className="h-80">
@@ -119,7 +119,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
                   <YAxis tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} tickFormatter={(value) => `$${value/1000}k`} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    // Dịch tooltip: Revenue -> Doanh thu
                     formatter={(value: number) => [`$${value.toLocaleString()}`, 'Doanh thu']}
                   />
                   <Legend iconType="circle" />
@@ -132,6 +131,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
                       strokeWidth={3}
                       dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
                       activeDot={{ r: 8 }} 
+                      connectNulls // Giúp nối các điểm lại nếu có tuần nào đó 1 nhóm không có doanh thu
                     />
                   ))}
                 </LineChart>
@@ -140,7 +140,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ reports, orders 
         </Card>
       ) : (
         <div className="p-10 text-center bg-white rounded-lg border border-slate-200">
-            <p className="text-slate-500">Chưa có dữ liệu cho bộ lọc này.</p>
+            <p className="text-slate-500">Chưa có dữ liệu đã duyệt cho bộ lọc này.</p>
         </div>
       )}
     </div>

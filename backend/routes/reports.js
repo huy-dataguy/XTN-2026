@@ -132,4 +132,45 @@ router.put('/:id/status', auth, async (req, res) => {
   }
 });
 
+
+// DELETE /api/reports/:id - Xóa báo cáo
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ msg: 'Report not found' });
+    }
+
+    // Logic phân quyền:
+    
+    // 1. Nếu là DISTRIBUTOR
+    if (req.user.role === 'DISTRIBUTOR') {
+      // Kiểm tra xem báo cáo có phải của người này không
+      if (report.distributorId.toString() !== req.user.id) {
+        return res.status(401).json({ msg: 'Not authorized' });
+      }
+      
+      // Chỉ cho phép xóa khi báo cáo chưa được xử lý (PENDING)
+      if (report.status !== 'PENDING') {
+        return res.status(400).json({ msg: 'Cannot delete an approved or rejected report.' });
+      }
+    }
+
+    // 2. Nếu là ADMIN thì có quyền xóa (bỏ qua check owner), 
+    // hoặc DISTRIBUTOR đã qua bước kiểm tra ở trên.
+    
+    // Thực hiện xóa
+    await report.deleteOne(); 
+    // Lưu ý: Nếu dùng Mongoose bản cũ thì dùng await report.remove();
+
+    res.json({ msg: 'Report removed' });
+  } catch (err) {
+    console.error(err.message);
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'Report not found' });
+    }
+    res.status(500).send('Server Error');
+  }
+});
 module.exports = router;
