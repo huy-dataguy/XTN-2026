@@ -110,14 +110,32 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     });
     return stats;
   }, [filteredOrders, distributors]);
-
+// --- THỐNG KÊ HOẠT ĐỘNG (Đã sửa để lọc theo Group) ---
   const activityStats = useMemo(() => {
+    // 1. Lấy ID những người đã đặt hàng trong khoảng thời gian này
     const activeDistributorIds = new Set(filteredOrders.map(o => resolveDistributorId(o)));
-    const activeUsers = distributors.filter(u => activeDistributorIds.has(u.id));
-    const inactiveUsers = distributors.filter(u => !activeDistributorIds.has(u.id));
-    return { activeUsers, inactiveUsers };
-  }, [filteredOrders, distributors]);
 
+    // 2. Lấy danh sách Users Active
+    const activeUsers = distributors.filter(u => activeDistributorIds.has(u.id));
+
+    // 3. Lấy danh sách Users Inactive (Chưa đặt hàng)
+    // Logic: Phải chưa có đơn hàng VÀ phải thuộc Group đang chọn (nếu không phải ALL)
+    const inactiveUsers = distributors.filter(u => {
+        const isNotActive = !activeDistributorIds.has(u.id);
+        
+        // Nếu đã Active rồi thì loại ngay
+        if (!isNotActive) return false;
+
+        // Nếu bộ lọc là ALL thì lấy hết những người chưa active
+        if (filterGroup === 'ALL') return true;
+
+        // Nếu bộ lọc là Group cụ thể -> Kiểm tra user có thuộc group đó không
+        const userGroup = getNormalizedGroup(u.group);
+        return userGroup === filterGroup;
+    });
+
+    return { activeUsers, inactiveUsers };
+  }, [filteredOrders, distributors, filterGroup]); // <--- Quan trọng: Phải thêm filterGroup vào dependency
   // --- LỌC HIỂN THỊ (THEO GROUP) ---
   const displayedOrders = useMemo(() => {
     let list = filteredOrders;
