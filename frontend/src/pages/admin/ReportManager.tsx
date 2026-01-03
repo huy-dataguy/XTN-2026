@@ -315,6 +315,8 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                 </div>
               </div>
 
+
+
               {/* DETAILS TABLE */}
               <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden mb-4">
                 <table className="w-full text-sm text-left">
@@ -331,21 +333,49 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {report.details.map((d, i) => (
-                      <tr key={i} className="hover:bg-white transition text-slate-700">
-                        <td className="px-3 py-2 font-medium">{d.productName}</td>
-                        <td className="px-2 py-2 text-center text-slate-400 text-xs">-</td>
-                        <td className="px-2 py-2 text-center text-blue-400 text-xs">-</td>
-                        <td className="px-2 py-2 text-center font-bold text-blue-700 bg-blue-50/30">{d.quantityReceived}</td>
-                        <td className="px-2 py-2 text-center font-bold">{d.quantitySold}</td>
-                        <td className="px-2 py-2 text-center text-red-500 text-xs">{d.quantityDamaged || '-'}</td>
-                        <td className="px-2 py-2 text-center font-bold text-emerald-700 bg-emerald-50/30">{d.remainingStock}</td>
-                        <td className="px-3 py-2 text-right font-medium text-emerald-600">${d.revenue.toLocaleString()}</td>
-                      </tr>
-                    ))}
+                    {report.details.map((d, i) => {
+                      // --- LOGIC SỬA ĐỔI TẠI ĐÂY ---
+                      // Tính toán trực tiếp số tồn kho thay vì dùng d.remainingStock từ DB
+                      // Công thức: Tồn = Tổng có (quantityReceived) - Bán - Hỏng
+                      const calculatedRemaining = d.quantityReceived - d.quantitySold - (d.quantityDamaged || 0);
+
+                      return (
+                        <tr key={i} className="hover:bg-white transition text-slate-700">
+                          <td className="px-3 py-2 font-medium">{d.productName}</td>
+                          
+                          {/* Các cột Cũ/Mới tạm thời để trống hoặc logic riêng nếu có tách field */}
+                          <td className="px-2 py-2 text-center text-slate-400 text-xs">-</td>
+                          <td className="px-2 py-2 text-center text-blue-400 text-xs">-</td>
+                          
+                          {/* Tổng có */}
+                          <td className="px-2 py-2 text-center font-bold text-blue-700 bg-blue-50/30">
+                            {d.quantityReceived}
+                          </td>
+                          
+                          {/* Bán */}
+                          <td className="px-2 py-2 text-center font-bold">{d.quantitySold}</td>
+                          
+                          {/* Hỏng */}
+                          <td className="px-2 py-2 text-center text-red-500 text-xs">
+                            {d.quantityDamaged || '-'}
+                          </td>
+                          
+                          {/* Tồn kho (Sử dụng biến đã tính toán) */}
+                          <td className="px-2 py-2 text-center font-bold text-emerald-700 bg-emerald-50/30">
+                            {calculatedRemaining}
+                          </td>
+                          
+                          {/* Doanh thu */}
+                          <td className="px-3 py-2 text-right font-medium text-emerald-600">
+                            ${d.revenue.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+
 
               {/* FOOTER */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-4">
