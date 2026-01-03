@@ -1,14 +1,15 @@
-// src/api/axiosClient.ts
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  // baseURL: 'https://be-vvnspkt-xtn2026.vercel.app/api', // Địa chỉ Backend của bạn
-  baseURL: 'https://be-vvnspkt-xtn.onrender.com/api', // Địa chỉ Backend của bạn
+  // baseURL: 'https://be-vvnspkt-xtn.onrender.com/api'
+  // baseURL: 'http://localhost:5000/api', // Địa chỉ Backend của bạn
+  baseURL: '/api', // Địa chỉ Backend của bạn
 
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
 
 // Interceptor: Tự động gắn Token vào header nếu có
 axiosClient.interceptors.request.use(async (config) => {
@@ -20,3 +21,5 @@ axiosClient.interceptors.request.use(async (config) => {
 });
 
 export default axiosClient;
+
+
