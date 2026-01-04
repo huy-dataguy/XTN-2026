@@ -3,33 +3,53 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
-  // 1. Thêm 'group' vào destructuring từ request body
-  const { username, password, name, role, group } = req.body;
+  // 1. Nhận thêm 'securityCode' từ frontend
+  const { username, password, name, role, group, securityCode } = req.body;
 
   try {
-    let user = await User.findOne({ username });
-    if (user) return res.status(400).json({ msg: 'User already exists' });
+    // --- BẮT ĐẦU: KIỂM TRA BẢO MẬT ---
+    const adminCode = process.env.ADMIN_REGISTRATION_CODE;
+    const distributorCode = process.env.DISTRIBUTOR_REGISTRATION_CODE;
 
-    // 2. Tạo user mới bao gồm cả thông tin group
+    // Logic kiểm tra mã dựa trên Role mà user muốn đăng ký
+    if (role === 'ADMIN') {
+        if (securityCode !== adminCode) {
+            return res.status(403).json({ msg: 'Sai mã bảo mật dành cho Admin (Admin Security Code).' });
+        }
+    } else if (role === 'DISTRIBUTOR') {
+        if (securityCode !== distributorCode) {
+            return res.status(403).json({ msg: 'Sai mã giới thiệu (Invite Code).' });
+        }
+    } else {
+        // Nếu cố tình gửi role bậy bạ
+        return res.status(400).json({ msg: 'Role không hợp lệ.' });
+    }
+    // --- KẾT THÚC: KIỂM TRA BẢO MẬT ---
+
+    // 2. Kiểm tra user tồn tại
+    let user = await User.findOne({ username });
+    if (user) return res.status(400).json({ msg: 'Username đã tồn tại.' });
+
+    // 3. Tạo user mới
     user = new User({ 
       username, 
       password, 
       name, 
       role, 
-      group // Nếu là ADMIN thì frontend gửi undefined, Mongoose sẽ tự bỏ qua hoặc lấy default
+      group // Nếu là ADMIN thì frontend gửi undefined, Mongoose tự bỏ qua
     });
     
-    // Mã hóa mật khẩu
+    // 4. Mã hóa mật khẩu
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
 
     await user.save();
     res.json({ msg: 'User registered successfully' });
+
   } catch (err) {
-    console.error(err.message); // Log lỗi ra terminal để dễ debug
+    console.error(err.message);
     res.status(500).send('Server error');
   }
 });

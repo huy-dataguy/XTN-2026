@@ -1,4 +1,3 @@
-// src/services/authService.ts
 import axiosClient from '../api/axiosClient';
 import { UserRole, DistributorGroup } from '../types';
 
@@ -7,9 +6,24 @@ export const authService = {
     return axiosClient.post('/auth/login', { username, password });
   },
 
-  // CẬP NHẬT HÀM NÀY: Thêm tham số group (có thể null nếu là Admin)
-  register: async (username: string, password: string, name: string, role: UserRole, group?: DistributorGroup) => {
-    return axiosClient.post('/auth/register', { username, password, name, role, group });
+  // CẬP NHẬT: Thêm tham số securityCode vào cuối
+  register: async (
+    username: string, 
+    password: string, 
+    name: string, 
+    role: UserRole, 
+    group?: DistributorGroup,
+    securityCode?: string // <--- Mới thêm
+  ) => {
+    // Gửi securityCode xuống backend
+    return axiosClient.post('/auth/register', { 
+      username, 
+      password, 
+      name, 
+      role, 
+      group,
+      securityCode 
+    });
   },
 
   getCurrentUser: async () => {
