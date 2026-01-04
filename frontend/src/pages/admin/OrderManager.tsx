@@ -5,7 +5,8 @@ import { Card } from '../../components/Card';
 import { 
   Check, X, Loader2, Calendar, Filter, 
   ShoppingBag, UserCheck, ChevronDown, ChevronUp, Package,
-  Square, CheckSquare, Trash2, RotateCcw, ArrowRight // Import thêm ArrowRight
+  Square, CheckSquare, Trash2, RotateCcw, ArrowRight,
+  Edit2, Save // Import thêm icon Edit2 và Save
 } from 'lucide-react';
 
 // --- MÀU SẮC NHÓM ---
@@ -22,18 +23,21 @@ const GROUP_COLORS: Record<string, string> = {
 interface OrderManagerProps {
   orders: Order[];
   distributors: User[];
+  currentUser: User | null; // THÊM: Truyền user hiện tại vào để check quyền
   onRefresh: () => void;
 }
 
-export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors, onRefresh }) => {
+export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors, currentUser, onRefresh }) => {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [filterGroup, setFilterGroup] = useState<string>('ALL');
   const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
 
+  // --- STATE SỬA NGÀY ---
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [tempDate, setTempDate] = useState<string>('');
+
   // --- LOGIC NGÀY THÁNG (RANGE FILTER) ---
-  
-  // 1. Helper format YYYY-MM-DD theo giờ địa phương
   const formatDateLocal = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -41,16 +45,14 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     return `${year}-${month}-${day}`;
   };
 
-  // 2. Lấy ngày Thứ 2 của tuần hiện tại
   const getMondayOfCurrentWeek = () => {
     const d = new Date();
-    const day = d.getDay(); // 0 (CN) -> 6 (T7)
-    const diff = day === 0 ? 6 : day - 1; // Nếu CN lùi 6 ngày, còn lại lùi day-1
+    const day = d.getDay(); 
+    const diff = day === 0 ? 6 : day - 1; 
     d.setDate(d.getDate() - diff);
     return formatDateLocal(d);
   };
 
-  // 3. State mặc định: Từ Thứ 2 -> Hôm nay
   const [startDate, setStartDate] = useState<string>(getMondayOfCurrentWeek());
   const [endDate, setEndDate] = useState<string>(formatDateLocal(new Date()));
 
@@ -76,15 +78,22 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     return null;
   };
 
-  // --- LỌC ĐƠN HÀNG THEO KHOẢNG THỜI GIAN ---
+  // Helper chuyển đổi Date sang string input datetime-local (YYYY-MM-DDThh:mm)
+  const toDateTimeInput = (isoString: string) => {
+    const date = new Date(isoString);
+    // Lưu ý: Cần chỉnh về múi giờ địa phương để hiển thị đúng trên input
+    const offset = date.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
+    return localISOTime;
+  };
+
+  // --- LỌC ĐƠN HÀNG ---
   const filteredOrders = useMemo(() => {
     if (!startDate || !endDate) return orders;
-
     const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0); // Đầu ngày
-
+    start.setHours(0, 0, 0, 0); 
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // Cuối ngày
+    end.setHours(23, 59, 59, 999); 
 
     return orders.filter(o => {
         const orderDate = new Date(o.createdAt);
@@ -92,7 +101,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     });
   }, [orders, startDate, endDate]);
 
-  // --- THỐNG KÊ (Dựa trên danh sách đã lọc ngày) ---
   const groupStats = useMemo(() => {
     const stats: Record<string, { revenue: number, count: number }> = {};
     Object.values(DistributorGroup).forEach(group => {
@@ -110,37 +118,22 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     });
     return stats;
   }, [filteredOrders, distributors]);
-// --- THỐNG KÊ HOẠT ĐỘNG (Đã sửa để lọc theo Group) ---
+
   const activityStats = useMemo(() => {
-    // 1. Lấy ID những người đã đặt hàng trong khoảng thời gian này
     const activeDistributorIds = new Set(filteredOrders.map(o => resolveDistributorId(o)));
-
-    // 2. Lấy danh sách Users Active
     const activeUsers = distributors.filter(u => activeDistributorIds.has(u.id));
-
-    // 3. Lấy danh sách Users Inactive (Chưa đặt hàng)
-    // Logic: Phải chưa có đơn hàng VÀ phải thuộc Group đang chọn (nếu không phải ALL)
     const inactiveUsers = distributors.filter(u => {
         const isNotActive = !activeDistributorIds.has(u.id);
-        
-        // Nếu đã Active rồi thì loại ngay
         if (!isNotActive) return false;
-
-        // Nếu bộ lọc là ALL thì lấy hết những người chưa active
         if (filterGroup === 'ALL') return true;
-
-        // Nếu bộ lọc là Group cụ thể -> Kiểm tra user có thuộc group đó không
         const userGroup = getNormalizedGroup(u.group);
         return userGroup === filterGroup;
     });
-
     return { activeUsers, inactiveUsers };
-  }, [filteredOrders, distributors, filterGroup]); // <--- Quan trọng: Phải thêm filterGroup vào dependency
-  // --- LỌC HIỂN THỊ (THEO GROUP) ---
+  }, [filteredOrders, distributors, filterGroup]); 
+
   const displayedOrders = useMemo(() => {
     let list = filteredOrders;
-    
-    // Filter by Group
     if (filterGroup !== 'ALL') {
       const groupMap: Record<string, string> = {};
       Object.keys(DistributorGroup).forEach((key) => {
@@ -162,8 +155,6 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
           return String(normalizedUserGroup).trim() === String(filterGroup).trim();
       });
     }
-
-    // Sort: Pending -> Date Desc
     return list.sort((a, b) => {
       if (a.status === OrderStatus.PENDING && b.status !== OrderStatus.PENDING) return -1;
       if (a.status !== OrderStatus.PENDING && b.status === OrderStatus.PENDING) return 1;
@@ -223,6 +214,37 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
     }
   };
 
+  // --- HANDLERS CHO VIỆC SỬA NGÀY ---
+  const handleEditDateClick = (order: Order) => {
+    setEditingDateId(order.id);
+    setTempDate(toDateTimeInput(order.createdAt));
+  };
+
+  const handleCancelEditDate = () => {
+    setEditingDateId(null);
+    setTempDate('');
+  };
+
+  const handleSaveDate = async (orderId: string) => {
+    if (!tempDate) return;
+    if (!window.confirm("Are you sure you want to update the date for this order?")) return;
+    
+    setProcessingId(orderId);
+    try {
+        // Giả sử service có hàm updateOrderDate. Nếu chưa có bạn phải thêm vào service.
+        await orderService.updateOrderDate(orderId, new Date(tempDate).toISOString());
+        setEditingDateId(null);
+        onRefresh();
+    } catch (error: any) {
+        alert(error.response?.data?.msg || 'Failed to update order date');
+    } finally {
+        setProcessingId(null);
+    }
+  };
+
+  // Check quyền Admin0
+  const isAdmin0 = currentUser?.username === 'admin0';
+
   return (
     <div className="space-y-6">
       
@@ -249,7 +271,7 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                 </select>
             </div>
 
-            {/* 👇 DATE RANGE FILTER (ĐÃ SỬA) */}
+            {/* DATE RANGE FILTER */}
             <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 grow xl:grow-0">
                 <div className="flex items-center gap-2 px-2 border-r border-slate-200">
                     <Calendar className="w-4 h-4 text-slate-500" />
@@ -334,6 +356,7 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                 const user = getUserInfo(order); 
                 const normalizedGroup = getNormalizedGroup(user?.group);
                 const isExpanded = expandedOrderIds.has(order.id);
+                const isEditingThisOrder = editingDateId === order.id;
 
                 return (
                     <Card key={order.id} className={`transition duration-200 border-l-4 ${
@@ -361,10 +384,47 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, distributors
                                     <span className="font-medium text-slate-800">{order.distributorName}</span>
                                     {normalizedGroup && <span className="text-[10px] bg-slate-100 px-1.5 rounded text-slate-500 border border-slate-200">{normalizedGroup}</span>}
                                 </p>
-                                <p className="flex items-center gap-1">
+                                
+                                {/* --- PHẦN SỬA NGÀY (UPDATED) --- */}
+                                <div className="flex items-center gap-1 h-8">
                                     <span className="text-slate-400">Date:</span> 
-                                    {new Date(order.createdAt).toLocaleDateString('en-GB')}
-                                </p>
+                                    
+                                    {isEditingThisOrder ? (
+                                        <div className="flex items-center gap-1 bg-white border border-blue-300 rounded p-0.5 animate-in fade-in zoom-in-95 duration-200">
+                                            <input 
+                                                type="datetime-local" 
+                                                value={tempDate}
+                                                onChange={(e) => setTempDate(e.target.value)}
+                                                className="text-xs outline-none bg-transparent"
+                                            />
+                                            <button onClick={() => handleSaveDate(order.id)} className="p-1 text-green-600 hover:bg-green-50 rounded" title="Save">
+                                                <Save className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={handleCancelEditDate} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Cancel">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-slate-800">
+                                                {new Date(order.createdAt).toLocaleDateString('en-GB')} {new Date(order.createdAt).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}
+                                            </span>
+                                            
+                                            {/* Chỉ hiện nút edit nếu là admin0 */}
+                                            {isAdmin0 && (
+                                                <button 
+                                                    onClick={() => handleEditDateClick(order)}
+                                                    className="ml-2 text-slate-400 hover:text-blue-600 transition-colors"
+                                                    title="Edit Date (Admin0 Only)"
+                                                >
+                                                    <Edit2 className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                                {/* ------------------------------- */}
+
                             </div>
                         </div>
 

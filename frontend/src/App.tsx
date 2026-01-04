@@ -151,8 +151,15 @@ const MainLayout = ({ user, logout }: { user: User, logout: () => void }) => {
                     />
                   } />
                   <Route path="/products" element={<ProductManager products={products} onRefresh={fetchData} />} />
-                  <Route path="/orders" element={<OrderManager orders={orders} distributors={distributors} onRefresh={fetchData} />} />
-                  <Route path="/reports" element={<ReportManager reports={reports} distributors={distributors} orders={orders} onRefresh={fetchData} />} />
+            {/* 👇 BẠN SỬA DÒNG NÀY: Thêm currentUser={user} */}
+                  <Route path="/orders" element={
+                    <OrderManager 
+                      orders={orders} 
+                      distributors={distributors} 
+                      onRefresh={fetchData} 
+                      currentUser={user} // <--- QUAN TRỌNG: Truyền user vào đây
+                    />
+                  } />                  <Route path="/reports" element={<ReportManager reports={reports} distributors={distributors} orders={orders} onRefresh={fetchData} />} />
                   
                   {/* 👇 [MỚI] Route cho trang Check Hàng */}
                   <Route 

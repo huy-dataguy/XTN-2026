@@ -20,7 +20,13 @@ export const orderService = {
     return axiosClient.put(`/orders/${id}/received`, { isReceived });
   },
 
-  // --- MỚI: Xóa đơn hàng ---
+  // --- MỚI: Cập nhật ngày tạo đơn (Dùng cho Admin0) ---
+  updateOrderDate: (id: string, date: string) => {
+    // date: ISO string
+    return axiosClient.put(`/orders/${id}/date`, { date });
+  },
+
+  // Xóa đơn hàng
   delete: (id: string) => {
     return axiosClient.delete(`/orders/${id}`);
   }
