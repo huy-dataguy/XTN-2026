@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-
+const User = require('../models/User'); // Import thêm User nếu cần check kỹ username
 // GET: Lấy danh sách đơn hàng
 router.get('/', auth, async (req, res) => {
   try {
@@ -151,5 +151,37 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// PUT: /api/orders/:id/date
+router.put('/:id/date', auth, async (req, res) => {
+  try {
+    // 1. Kiểm tra quyền: Chỉ cho phép username "admin0"
+    // Lưu ý: req.user lấy từ token. Nếu token của bạn không chứa username, 
+    // bạn cần query DB để lấy username: const user = await User.findById(req.user.id);
+    
+    // Giả sử req.user có chứa username hoặc ta query lại cho chắc chắn:
+    const currentUser = await User.findById(req.user.id);
 
+    if (!currentUser || currentUser.username !== 'admin0') {
+        return res.status(403).json({ msg: 'Access denied. Only admin0 can change order date.' });
+    }
+
+    const { date } = req.body; // Client gửi lên chuỗi ISO Date
+
+    // 2. Tìm và update
+    const order = await Order.findByIdAndUpdate(
+      req.params.id, 
+      { createdAt: date }, // Mongoose tự hiểu chuỗi ISO string gán vào Date
+      { new: true }
+    );
+
+    if (!order) {
+        return res.status(404).json({ msg: 'Order not found' });
+    }
+
+    res.json(order);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
 module.exports = router;
