@@ -19,8 +19,10 @@ import { ProductManager } from './pages/admin/ProductManager';
 import { OrderManager } from './pages/admin/OrderManager';
 import { ReportManager } from './pages/admin/ReportManager';
 import { UserManager } from './pages/admin/UserManager';
-// 👇 [MỚI] Import trang check hàng vừa tạo
 import { ReceivedOrderManager } from './pages/admin/ReceivedOrderManager';
+
+// 👇 [MỚI] Import trang Sao kê (Lưu ý đường dẫn file bạn tạo)
+import StatementPage from './pages/admin/StatementPage'; 
 
 // Distributor Pages
 import { DistributorDashboard } from './pages/distributor/DistributorDashboard';
@@ -151,28 +153,31 @@ const MainLayout = ({ user, logout }: { user: User, logout: () => void }) => {
                     />
                   } />
                   <Route path="/products" element={<ProductManager products={products} onRefresh={fetchData} />} />
-            {/* 👇 BẠN SỬA DÒNG NÀY: Thêm currentUser={user} */}
                   <Route path="/orders" element={
                     <OrderManager 
                       orders={orders} 
                       distributors={distributors} 
                       onRefresh={fetchData} 
-                      currentUser={user} // <--- QUAN TRỌNG: Truyền user vào đây
+                      currentUser={user}
                     />
-                  } />                  <Route path="/reports" element={<ReportManager reports={reports} distributors={distributors} orders={orders} onRefresh={fetchData} />} />
+                  } />                  
+                  <Route path="/reports" element={<ReportManager reports={reports} distributors={distributors} orders={orders} onRefresh={fetchData} />} />
                   
-                  {/* 👇 [MỚI] Route cho trang Check Hàng */}
                   <Route 
                     path="/received-check" 
                     element={
                       <ReceivedOrderManager 
                         orders={orders} 
-                        products={products}  // 👈 THÊM DÒNG NÀY
+                        products={products}
                         distributors={distributors} 
                         onRefresh={fetchData} 
                       />
                     } 
                   />
+
+                  {/* 👇 [MỚI] Route cho trang Sao kê tài khoản */}
+                  <Route path="/finance" element={<StatementPage />} />
+
                 </>
               )}
 
