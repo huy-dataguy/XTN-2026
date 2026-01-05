@@ -95,7 +95,32 @@ router.put('/:id/reset-password', auth, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+// GET: Lấy danh sách chỉ các Admin (để giao task nội bộ)
+router.get('/all-staff', auth, async (req, res) => {
+  try {
+    // 1. Check quyền: Người gọi api phải là Admin
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
 
+    // 2. Query: Chỉ lấy user có role là 'ADMIN'
+    // .select(...) để chỉ lấy các trường cần thiết, bỏ qua password
+    const admins = await User.find({ role: 'ADMIN' })
+                             .select('name username role group');
+    
+    // 3. Format dữ liệu trả về
+    const formatted = admins.map(u => ({
+      id: u._id,
+      name: u.name,
+      username: u.username,
+      role: u.role,
+      label: `${u.name} (Admin)` 
+    }));
 
-
+    res.json(formatted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
 module.exports = router;

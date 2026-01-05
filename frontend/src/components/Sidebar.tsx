@@ -12,7 +12,8 @@ import {
   Users, 
   UserCircle,
   CheckSquare,
-  Landmark
+  Landmark,
+  ListTodo
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -79,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, reports = [], onLogout }
           <>
             <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
             <NavItem to="/finance" icon={Landmark} label="Bank Statement" />
+            <NavItem to="/tasks" icon={ListTodo} label="Tasks Management" />
             <NavItem to="/users" icon={Users} label="Accounts" />
             <NavItem to="/products" icon={Package} label="Products" />
             <NavItem to="/orders" icon={ShoppingCart} label="Orders" />
