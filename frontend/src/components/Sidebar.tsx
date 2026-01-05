@@ -11,7 +11,8 @@ import {
   LogOut, 
   Users, 
   UserCircle,
-  CheckSquare // 1. Import icon mới
+  CheckSquare,
+  Landmark
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -77,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, reports = [], onLogout }
         {user.role === UserRole.ADMIN ? (
           <>
             <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
+            <NavItem to="/finance" icon={Landmark} label="Bank Statement" />
             <NavItem to="/users" icon={Users} label="Accounts" />
             <NavItem to="/products" icon={Package} label="Products" />
             <NavItem to="/orders" icon={ShoppingCart} label="Orders" />
