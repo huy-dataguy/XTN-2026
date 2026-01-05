@@ -20,6 +20,7 @@ import { OrderManager } from './pages/admin/OrderManager';
 import { ReportManager } from './pages/admin/ReportManager';
 import { UserManager } from './pages/admin/UserManager';
 import { ReceivedOrderManager } from './pages/admin/ReceivedOrderManager';
+import KanbanPage from './pages/admin/KanbanPage';
 
 // 👇 [MỚI] Import trang Sao kê (Lưu ý đường dẫn file bạn tạo)
 import StatementPage from './pages/admin/StatementPage'; 
@@ -177,6 +178,7 @@ const MainLayout = ({ user, logout }: { user: User, logout: () => void }) => {
 
                   {/* 👇 [MỚI] Route cho trang Sao kê tài khoản */}
                   <Route path="/finance" element={<StatementPage />} />
+                  <Route path="/tasks" element={<KanbanPage />} />
 
                 </>
               )}

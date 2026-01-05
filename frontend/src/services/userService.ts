@@ -11,4 +11,8 @@ export const userService = {
 
   // Xóa nhân viên theo ID
   delete: (userId: string) => axiosClient.delete(`/users/${userId}`),
+
+  getAllStaff: () => {
+    return axiosClient.get('/users/all-staff');
+  }
 };
