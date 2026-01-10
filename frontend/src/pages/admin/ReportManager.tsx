@@ -89,8 +89,8 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
       
       if (rawGroup && stats[rawGroup as string]) {
         if (r.status === ReportStatus.APPROVED) {
-          stats[rawGroup as string].revenue += r.totalRevenue;
-          stats[rawGroup as string].sold += r.totalSold;
+          stats[rawGroup as string].revenue += (r.totalRevenue || 0); // Safe check
+          stats[rawGroup as string].sold += (r.totalSold || 0);
         }
         stats[rawGroup as string].count += 1;
       }
@@ -196,16 +196,16 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                  <div className="flex justify-between items-center mb-2">
                    <span className="font-bold text-[10px] uppercase truncate" title={group}>{group}</span>
                  </div>
-                 <div className="text-lg font-bold leading-none">${stat.revenue.toLocaleString()}</div>
+                 <div className="text-lg font-bold leading-none">${(stat.revenue || 0).toLocaleString()}</div>
                  <div className="text-[10px] mt-1 opacity-70">{stat.count} Reports</div>
               </div>
             );
          })}
       </div>
 
-      {/* --- MOVED: 3. MISSING REPORTS SECTION (GIỮA TRANG) --- */}
+      {/* 3. MISSING REPORTS SECTION */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-         {/* Header Bar - Click để đóng mở */}
+         {/* Header Bar */}
          <div 
             className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition" 
             onClick={() => setShowMissing(!showMissing)}
@@ -218,7 +218,7 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
             <div className="text-xs text-blue-600 font-medium">{showMissing ? 'Thu gọn' : 'Xem danh sách'}</div>
         </div>
 
-        {/* Content - Danh sách user */}
+        {/* Content */}
         {showMissing && (
             <div className="p-4 bg-white grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
                {missingReporters.length === 0 ? (
@@ -283,7 +283,9 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                   <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
                     <p className="flex items-center gap-1">
                         <span className="text-slate-400">Ngày bắt đầu:</span> 
-                        <span className="font-medium">{new Date(report.weekStartDate).toLocaleDateString('vi-VN')}</span>
+                        <span className="font-medium">
+                            {report.weekStartDate ? new Date(report.weekStartDate).toLocaleDateString('vi-VN') : 'N/A'}
+                        </span>
                     </p>
                     <p className="flex items-center gap-1">
                         <span className="text-slate-400">ID:</span> 
@@ -296,11 +298,13 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                     <div className="flex gap-2 text-center">
                         <div className="bg-blue-50 px-3 py-1.5 rounded border border-blue-100">
                             <div className="text-[9px] text-blue-400 uppercase font-bold tracking-wider">Đã bán</div>
-                            <div className="font-bold text-blue-700">{report.totalSold}</div>
+                            <div className="font-bold text-blue-700">{report.totalSold || 0}</div>
                         </div>
                         <div className="bg-emerald-50 px-3 py-1.5 rounded border border-emerald-100">
                             <div className="text-[9px] text-emerald-400 uppercase font-bold tracking-wider">Doanh thu</div>
-                            <div className="font-bold text-emerald-700">${report.totalRevenue.toLocaleString()}</div>
+                            <div className="font-bold text-emerald-700">
+                                ${(report.totalRevenue || 0).toLocaleString()}
+                            </div>
                         </div>
                     </div>
                     
@@ -314,8 +318,6 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                     </button>
                 </div>
               </div>
-
-
 
               {/* DETAILS TABLE */}
               <div className="bg-slate-50 rounded-lg border border-slate-100 overflow-hidden mb-4">
@@ -333,41 +335,32 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {report.details.map((d, i) => {
-                      // --- LOGIC SỬA ĐỔI TẠI ĐÂY ---
-                      // Tính toán trực tiếp số tồn kho thay vì dùng d.remainingStock từ DB
-                      // Công thức: Tồn = Tổng có (quantityReceived) - Bán - Hỏng
+                    {report.details && report.details.map((d, i) => {
                       const calculatedRemaining = d.quantityReceived - d.quantitySold - (d.quantityDamaged || 0);
 
                       return (
                         <tr key={i} className="hover:bg-white transition text-slate-700">
                           <td className="px-3 py-2 font-medium">{d.productName}</td>
                           
-                          {/* Các cột Cũ/Mới tạm thời để trống hoặc logic riêng nếu có tách field */}
                           <td className="px-2 py-2 text-center text-slate-400 text-xs">-</td>
                           <td className="px-2 py-2 text-center text-blue-400 text-xs">-</td>
                           
-                          {/* Tổng có */}
                           <td className="px-2 py-2 text-center font-bold text-blue-700 bg-blue-50/30">
                             {d.quantityReceived}
                           </td>
                           
-                          {/* Bán */}
                           <td className="px-2 py-2 text-center font-bold">{d.quantitySold}</td>
                           
-                          {/* Hỏng */}
                           <td className="px-2 py-2 text-center text-red-500 text-xs">
                             {d.quantityDamaged || '-'}
                           </td>
                           
-                          {/* Tồn kho (Sử dụng biến đã tính toán) */}
                           <td className="px-2 py-2 text-center font-bold text-emerald-700 bg-emerald-50/30">
                             {calculatedRemaining}
                           </td>
                           
-                          {/* Doanh thu */}
                           <td className="px-3 py-2 text-right font-medium text-emerald-600">
-                            ${d.revenue.toLocaleString()}
+                            ${(d.revenue || 0).toLocaleString()}
                           </td>
                         </tr>
                       );
@@ -375,7 +368,6 @@ export const ReportManager: React.FC<ReportManagerProps> = ({ reports, distribut
                   </tbody>
                 </table>
               </div>
-
 
               {/* FOOTER */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-4">
