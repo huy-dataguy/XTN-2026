@@ -123,4 +123,55 @@ router.get('/all-staff', auth, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+
+
+
+// 4. CẬP NHẬT THÔNG TIN (Sửa tên, nhóm, username)
+router.put('/:id', auth, async (req, res) => {
+  try {
+    // Chỉ Admin mới có quyền sửa
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
+
+    const { name, username, group } = req.body;
+    
+    // Tìm user theo ID
+    let user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+
+    // Nếu thay đổi username, cần kiểm tra xem username mới đã tồn tại chưa (trừ chính nó)
+    if (username && username !== user.username) {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+        return res.status(400).json({ msg: 'Username already exists' });
+      }
+      user.username = username;
+    }
+
+    // Cập nhật các trường khác
+    if (name) user.name = name;
+    
+    // Chỉ cập nhật group nếu user là DISTRIBUTOR (Admin thường không cần group hoặc logic khác)
+    if (user.role === 'DISTRIBUTOR' && group) {
+      user.group = group;
+    }
+
+    await user.save();
+
+    // Trả về thông tin đã format để frontend cập nhật state
+    res.json({
+      id: user._id,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      group: user.group
+    });
+
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;
