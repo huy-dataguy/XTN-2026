@@ -22,4 +22,4 @@ const StatementSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Statement', StatementSchema);
+module.exports = mongoose.model('Statement1', StatementSchema);
