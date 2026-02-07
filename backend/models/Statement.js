@@ -18,7 +18,7 @@ const StatementSchema = new mongoose.Schema({
   
   // Số dư (Nhập tay để khớp với sao kê ngân hàng lúc đó)
   balance: { type: Number, required: true },
-
+  tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
   createdAt: { type: Date, default: Date.now }
 });
 
