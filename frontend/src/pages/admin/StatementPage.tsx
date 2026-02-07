@@ -4,7 +4,7 @@ import tagService, { Tag } from '../../services/TagService';
 import { 
   Plus, Trash2, Calendar, Landmark, Lock, Calculator,
   PieChart, Tag as TagIcon, Settings, Edit2, Save, X, Filter, ArrowRight,
-  TrendingUp, TrendingDown, Wallet, BarChart3, Search
+  TrendingUp, TrendingDown, Wallet, BarChart3, Search, RotateCcw, Check
 } from 'lucide-react';
 
 // --- CONSTANTS ---
@@ -21,7 +21,7 @@ const TAG_COLORS = [
 
 const formatVND = (num: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 
-// --- 1. REUSABLE FORM COMPONENT (Dùng chung cho Tạo & Sửa) ---
+// --- 1. REUSABLE FORM COMPONENT ---
 interface TransactionFormProps {
   formData: any;
   onChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
@@ -94,12 +94,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 key={tag._id}
                 type="button"
                 onClick={() => toggleTag(tag._id)}
-                className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition-all shadow-sm
+                className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition-all shadow-sm flex items-center gap-1.5
                   ${isSelected 
                     ? `${colorObj?.bg} ${colorObj?.text} border-transparent ring-2 ring-offset-1 ${colorObj?.ring}` 
                     : 'bg-white text-slate-500 border-slate-200 hover:bg-white hover:border-slate-300'}`}
               >
-                {tag.name} {isSelected && '✓'}
+                {tag.name} {isSelected && <Check size={12} strokeWidth={4} />}
               </button>
             )
           })}
@@ -203,48 +203,45 @@ const TagManager = ({ tags, onTagsChange }: { tags: Tag[], onTagsChange: () => v
 
 // --- 3. STATS VIEW (DASHBOARD) ---
 const StatsView = ({ statements, tags }: { statements: Statement[], tags: Tag[] }) => {
-  // State cho bộ lọc tag
-  const [filterTagId, setFilterTagId] = useState<string | null>(null);
+  // --- UPDATED: Allow Multiple Tag Selection for Stats too ---
+  const [filterTagIds, setFilterTagIds] = useState<string[]>([]);
 
-  // 1. Logic lọc danh sách giao dịch dựa trên Tag được chọn
-  const filteredStatements = filterTagId
-    ? statements.filter(s => s.tags.some(t => t._id === filterTagId))
+  const filteredStatements = filterTagIds.length > 0
+    ? statements.filter(s => s.tags.some(t => filterTagIds.includes(t._id)))
     : statements;
 
-  // 2. Tính toán tổng quan (Dựa trên danh sách đã lọc)
   const totalIn = filteredStatements.filter(s => s.type === 'IN').reduce((sum, s) => sum + s.amount, 0);
   const totalOut = filteredStatements.filter(s => s.type === 'OUT').reduce((sum, s) => sum + s.amount, 0);
   const netBalance = totalIn - totalOut;
 
-  // 3. Tính toán chi tiết cho TỪNG TAG (Để hiển thị danh sách bên dưới)
-  // Logic: Duyệt qua tất cả các tag có trong hệ thống, tính tổng IN/OUT cho mỗi tag đó
+  // Breakdown logic remains the same (showing all relevant tags for filtered scope)
   const tagBreakdown = tags.map(tag => {
-    // Tìm các giao dịch có chứa tag này
     const relevantStms = statements.filter(s => s.tags.some(t => t._id === tag._id));
-    
     const inAmount = relevantStms.filter(s => s.type === 'IN').reduce((sum, s) => sum + s.amount, 0);
     const outAmount = relevantStms.filter(s => s.type === 'OUT').reduce((sum, s) => sum + s.amount, 0);
-    const totalVolume = inAmount + outAmount; // Dùng để sắp xếp độ quan trọng
-
+    const totalVolume = inAmount + outAmount;
     return { tag, inAmount, outAmount, totalVolume };
-  }).sort((a, b) => b.totalVolume - a.totalVolume); // Sắp xếp tag nào có dòng tiền nhiều nhất lên đầu
+  }).sort((a, b) => b.totalVolume - a.totalVolume);
 
-  // Helper tính % thanh bar
   const maxVolume = Math.max(...tagBreakdown.map(t => Math.max(t.inAmount, t.outAmount)), 0) || 1;
+
+  const toggleFilter = (id: string) => {
+    setFilterTagIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       
-      {/* 1. FILTER BAR */}
+      {/* FILTER BAR */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2 mb-3 text-slate-500 text-sm font-bold uppercase tracking-wider">
-          <Filter size={14} /> Lọc theo danh mục
+          <Filter size={14} /> Lọc thống kê (Chọn nhiều)
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setFilterTagId(null)}
+            onClick={() => setFilterTagIds([])}
             className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all
-              ${filterTagId === null 
+              ${filterTagIds.length === 0 
                 ? 'bg-slate-800 text-white border-slate-800 shadow-md' 
                 : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
           >
@@ -252,85 +249,77 @@ const StatsView = ({ statements, tags }: { statements: Statement[], tags: Tag[] 
           </button>
           {tags.map(tag => {
             const colorObj = TAG_COLORS.find(c => c.val === tag.color);
-            const isActive = filterTagId === tag._id;
+            const isActive = filterTagIds.includes(tag._id);
             return (
               <button
                 key={tag._id}
-                onClick={() => setFilterTagId(isActive ? null : tag._id)}
-                className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all flex items-center gap-2
+                onClick={() => toggleFilter(tag._id)}
+                className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all flex items-center gap-1.5
                   ${isActive 
                     ? `${colorObj?.bg} ${colorObj?.text} border-current ring-1 ring-offset-1` 
                     : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
               >
-                {tag.name}
+                {tag.name} {isActive && <Check size={12} strokeWidth={4}/>}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* 2. OVERVIEW CARDS (Tổng quan dựa trên filter) */}
+      {/* OVERVIEW CARDS (Calculated based on Filter) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card Thu */}
         <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 relative overflow-hidden">
           <div className="flex justify-between items-start mb-4">
             <div className="p-2 bg-white rounded-lg text-emerald-600 shadow-sm"><TrendingUp size={20}/></div>
             <span className="text-xs font-bold text-emerald-600 uppercase bg-emerald-100 px-2 py-1 rounded-md">Thu Nhập</span>
           </div>
           <div className="text-2xl font-black text-slate-800">{formatVND(totalIn)}</div>
-          <p className="text-xs text-emerald-600 font-medium mt-1 opacity-80">Tổng tiền vào</p>
+          <p className="text-xs text-emerald-600 font-medium mt-1 opacity-80">Tổng tiền vào (Đã lọc)</p>
         </div>
 
-        {/* Card Chi */}
         <div className="bg-rose-50 p-5 rounded-2xl border border-rose-100 relative overflow-hidden">
            <div className="flex justify-between items-start mb-4">
             <div className="p-2 bg-white rounded-lg text-rose-600 shadow-sm"><TrendingDown size={20}/></div>
             <span className="text-xs font-bold text-rose-600 uppercase bg-rose-100 px-2 py-1 rounded-md">Chi Tiêu</span>
           </div>
           <div className="text-2xl font-black text-slate-800">{formatVND(totalOut)}</div>
-          <p className="text-xs text-rose-600 font-medium mt-1 opacity-80">Tổng tiền ra</p>
+          <p className="text-xs text-rose-600 font-medium mt-1 opacity-80">Tổng tiền ra (Đã lọc)</p>
         </div>
 
-        {/* Card Số Dư */}
         <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 relative overflow-hidden">
            <div className="flex justify-between items-start mb-4">
             <div className="p-2 bg-white rounded-lg text-blue-600 shadow-sm"><Wallet size={20}/></div>
             <span className="text-xs font-bold text-blue-600 uppercase bg-blue-100 px-2 py-1 rounded-md">Ròng</span>
           </div>
           <div className={`text-2xl font-black ${netBalance >= 0 ? 'text-slate-800' : 'text-rose-600'}`}>{formatVND(netBalance)}</div>
-          <p className="text-xs text-blue-600 font-medium mt-1 opacity-80">Thu - Chi</p>
+          <p className="text-xs text-blue-600 font-medium mt-1 opacity-80">Thu - Chi (Đã lọc)</p>
         </div>
       </div>
 
-      {/* 3. TAG BREAKDOWN (Báo cáo chi tiết) */}
+      {/* TAG BREAKDOWN */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <h3 className="font-bold text-slate-700 flex items-center gap-2">
-            <BarChart3 size={18} className="text-slate-400"/> Chi tiết theo Danh Mục
+            <BarChart3 size={18} className="text-slate-400"/> Chi tiết toàn bộ Danh Mục
           </h3>
-          <span className="text-xs text-slate-400 font-medium">Sắp xếp theo dòng tiền</span>
+          <span className="text-xs text-slate-400 font-medium">Tổng quát</span>
         </div>
         
         <div className="divide-y divide-slate-100">
           {tagBreakdown.map(({ tag, inAmount, outAmount }) => {
             const colorObj = TAG_COLORS.find(c => c.val === tag.color);
-            // Tính % độ dài thanh bar
             const inPercent = (inAmount / maxVolume) * 100;
             const outPercent = (outAmount / maxVolume) * 100;
 
-            if (inAmount === 0 && outAmount === 0) return null; // Ẩn tag không có gd
+            if (inAmount === 0 && outAmount === 0) return null;
 
             return (
               <div key={tag._id} className="p-5 hover:bg-slate-50 transition group">
-                {/* Header Tag Name */}
                 <div className="flex items-center gap-3 mb-3">
                    <div className={`w-3 h-3 rounded-full ${colorObj?.bg.replace('bg-', 'bg-slate-400 ')} border border-slate-200 shadow-sm`}></div>
                    <span className="font-bold text-slate-700 text-sm">{tag.name}</span>
                 </div>
-
-                {/* Bars Container */}
                 <div className="space-y-3">
-                  {/* Income Bar */}
                   <div className="flex items-center gap-4">
                     <div className="w-16 text-xs font-bold text-slate-400 uppercase text-right">Vào</div>
                     <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex justify-start">
@@ -339,7 +328,6 @@ const StatsView = ({ statements, tags }: { statements: Statement[], tags: Tag[] 
                     <div className="w-24 text-right text-sm font-bold text-emerald-600">{inAmount > 0 ? formatVND(inAmount) : '-'}</div>
                   </div>
 
-                  {/* Expense Bar */}
                   <div className="flex items-center gap-4">
                     <div className="w-16 text-xs font-bold text-slate-400 uppercase text-right">Ra</div>
                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex justify-start">
@@ -369,6 +357,9 @@ const StatementPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [currentRealBalance, setCurrentRealBalance] = useState<number>(0);
   
+  // --- UPDATED: STATE CHO MULTI-FILTER ---
+  const [filterTagIds, setFilterTagIds] = useState<string[]>([]);
+
   // State for Edit Modal
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -383,7 +374,6 @@ const StatementPage: React.FC = () => {
     selectedTags: [] as string[]
   };
 
-  // Separate states for Create Form and Edit Form to avoid conflict
   const [createFormData, setCreateFormData] = useState(initialFormState);
   const [editFormData, setEditFormData] = useState(initialFormState);
 
@@ -403,7 +393,6 @@ const StatementPage: React.FC = () => {
 
   useEffect(() => { fetchAllData(); }, []);
 
-  // Auto-calculate balance for CREATE FORM only
   useEffect(() => {
     const inputAmount = parseFloat(createFormData.amount) || 0;
     let predictedBalance = currentRealBalance;
@@ -412,7 +401,20 @@ const StatementPage: React.FC = () => {
     setCreateFormData(prev => ({ ...prev, balance: predictedBalance.toString() }));
   }, [createFormData.amount, createFormData.type, currentRealBalance]); 
 
-  // --- HANDLERS ---
+  // --- UPDATED: LOGIC LỌC ĐA TAG (OR Logic) ---
+  const filteredStatements = filterTagIds.length > 0
+    ? statements.filter(s => s.tags.some(t => filterTagIds.includes(t._id)))
+    : statements;
+
+  // --- HANDLER: Toggle Filter Tag ---
+  const toggleTransactionFilter = (tagId: string) => {
+    setFilterTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId) 
+        : [...prev, tagId]
+    );
+  };
+
   const handleCreateChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setCreateFormData({ ...createFormData, [e.target.name]: e.target.value });
   };
@@ -466,7 +468,7 @@ const StatementPage: React.FC = () => {
         tags: createFormData.selectedTags
       };
       await statementService.createStatement(payload);
-      setCreateFormData({ ...initialFormState, transactionDate: createFormData.transactionDate }); // Reset form but keep date
+      setCreateFormData({ ...initialFormState, transactionDate: createFormData.transactionDate }); 
       fetchAllData(); 
     } catch (err) { alert('Lỗi khi tạo mới.'); }
   };
@@ -534,7 +536,7 @@ const StatementPage: React.FC = () => {
       <div className="min-h-[500px]">
         {activeTab === 'TRANSACTIONS' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* CREATE FORM (Always visible) */}
+            {/* CREATE FORM */}
             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200 mb-8">
               <h2 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2 text-slate-400">
                 <Plus className="w-4 h-4" /> Tạo Giao Dịch Mới
@@ -546,6 +548,47 @@ const StatementPage: React.FC = () => {
                 tags={tags}
                 toggleTag={toggleCreateTag}
               />
+            </div>
+
+            {/* FILTER TOOLBAR (UPDATED FOR MULTI-SELECT) */}
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
+              <h3 className="text-lg font-bold text-slate-700 flex items-center gap-2">
+                <Landmark size={20} className="text-slate-400"/> Lịch Sử Giao Dịch
+                <span className="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+                  {filteredStatements.length} bản ghi
+                </span>
+              </h3>
+              
+              <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-2 md:pb-0 scrollbar-hide">
+                 <div className="text-xs font-bold text-slate-400 uppercase mr-1 whitespace-nowrap flex items-center gap-1">
+                    <Filter size={12}/> Lọc (Nhiều):
+                 </div>
+                 <button
+                    onClick={() => setFilterTagIds([])}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all whitespace-nowrap
+                    ${filterTagIds.length === 0 
+                        ? 'bg-slate-800 text-white border-slate-800 shadow-md' 
+                        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                 >
+                    Tất cả
+                 </button>
+                 {tags.map(tag => {
+                    const colorObj = TAG_COLORS.find(c => c.val === tag.color);
+                    const isActive = filterTagIds.includes(tag._id);
+                    return (
+                    <button
+                        key={tag._id}
+                        onClick={() => toggleTransactionFilter(tag._id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all whitespace-nowrap flex items-center gap-1.5
+                        ${isActive 
+                            ? `${colorObj?.bg} ${colorObj?.text} border-current ring-1 ring-offset-1` 
+                            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    >
+                        {tag.name} {isActive && <Check size={12} strokeWidth={4}/>}
+                    </button>
+                    );
+                 })}
+              </div>
             </div>
 
             {/* TABLE */}
@@ -564,10 +607,22 @@ const StatementPage: React.FC = () => {
                   <tbody className="divide-y divide-slate-100">
                     {loading ? (
                       <tr><td colSpan={5} className="p-10 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
-                    ) : statements.length === 0 ? (
-                       <tr><td colSpan={5} className="p-16 text-center text-slate-400 italic">Chưa có giao dịch nào.</td></tr>
+                    ) : filteredStatements.length === 0 ? (
+                       <tr>
+                         <td colSpan={5} className="p-16 text-center text-slate-400 italic">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                                <Search size={32} className="opacity-20"/>
+                                {filterTagIds.length > 0 ? 'Không tìm thấy giao dịch nào chứa các tag đã chọn.' : 'Chưa có giao dịch nào.'}
+                                {filterTagIds.length > 0 && (
+                                    <button onClick={() => setFilterTagIds([])} className="text-blue-500 font-bold hover:underline flex items-center gap-1 text-xs mt-1">
+                                        <RotateCcw size={12}/> Xóa bộ lọc
+                                    </button>
+                                )}
+                            </div>
+                         </td>
+                       </tr>
                     ) : (
-                      statements.map((item) => (
+                      filteredStatements.map((item) => (
                         <tr key={item._id} className="hover:bg-slate-50/80 transition group">
                           <td className="p-5 whitespace-nowrap align-top">
                              <div className="flex flex-col">
