@@ -1,10 +1,7 @@
-// src/api/axiosClient.ts
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  // baseURL: 'https://be-vvnspkt-xtn2026.vercel.app/api', // Địa chỉ Backend của bạn
-  baseURL: 'https://be-vvnspkt-xtn.onrender.com/api', // Địa chỉ Backend của bạn
-
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://be-vvnspkt-xtn.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
