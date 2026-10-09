@@ -1,0 +1,45 @@
+{
+  "baseline": "ecbac8b",
+  "date": "2026-10-09",
+  "node": "v24.15.0",
+  "npm": "11.12.1",
+  "checks": [
+    {
+      "command": "node scripts/audit-probes.cjs",
+      "exitCode": 0,
+      "artifact": "baseline-probes.json",
+      "scope": "7 baseline defect probes, fake persistence; P07 real schema validation"
+    },
+    {
+      "command": "node --check backend/server.js",
+      "exitCode": 0,
+      "scope": "syntax only"
+    },
+    {
+      "command": "npm run build",
+      "cwd": "frontend",
+      "exitCode": 0,
+      "artifact": "frontend-build.log"
+    },
+    {
+      "command": "npm run lint",
+      "cwd": "frontend",
+      "exitCode": 0,
+      "artifact": "frontend-lint.log",
+      "scope": "JS/JSX only"
+    },
+    {
+      "command": "npx eslint --print-config src/App.tsx",
+      "cwd": "frontend",
+      "exitCode": 0,
+      "stdout": "undefined"
+    }
+  ],
+  "notVerified": [
+    "production environment",
+    "real database integration",
+    "browser UI",
+    "database concurrency",
+    "load behavior"
+  ]
+}

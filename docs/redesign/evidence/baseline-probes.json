@@ -1,0 +1,76 @@
+{
+  "mode": "isolated-real-handlers-fake-persistence",
+  "results": [
+    {
+      "id": "P01-negative-order-quantity",
+      "reproduced": true,
+      "evidence": {
+        "status": 200,
+        "stock": 12,
+        "totalAmount": -200
+      }
+    },
+    {
+      "id": "P02-partial-stock-write",
+      "reproduced": true,
+      "evidence": {
+        "status": 404,
+        "stockBefore": 10,
+        "stockAfter": 8,
+        "orderCreated": false
+      }
+    },
+    {
+      "id": "P03-cross-owner-received",
+      "reproduced": true,
+      "evidence": {
+        "status": 200,
+        "callerRole": "DISTRIBUTOR",
+        "owner": "another-user",
+        "updated": {
+          "isReceived": true
+        }
+      }
+    },
+    {
+      "id": "P04-missing-admin-invite-config",
+      "reproduced": true,
+      "evidence": {
+        "status": 200,
+        "roleGranted": "ADMIN",
+        "securityCodeOmitted": true,
+        "inviteConfigMissing": true
+      }
+    },
+    {
+      "id": "P05-client-report-totals",
+      "reproduced": true,
+      "evidence": {
+        "status": 200,
+        "totalRevenue": 999999,
+        "totalDamaged": -5,
+        "detailCount": 0
+      }
+    },
+    {
+      "id": "P06-distributor-delete-internal-task",
+      "reproduced": true,
+      "evidence": {
+        "status": 200,
+        "callerRole": "DISTRIBUTOR",
+        "deleted": "another-admins-task"
+      }
+    },
+    {
+      "id": "P07-schema-allows-negative-values",
+      "reproduced": true,
+      "evidence": {
+        "realMongooseValidation": "accepted",
+        "productPrice": -100,
+        "productStock": -5,
+        "orderQuantity": -2,
+        "reportDamaged": -5
+      }
+    }
+  ]
+}
