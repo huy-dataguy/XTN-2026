@@ -32,7 +32,7 @@ jobs:
           MONGO_URI='mongodb://127.0.0.1:27028/xtn_refactor_test_browser_ci?directConnection=true' JWT_SECRET='ci-fixture-secret-more-than-32-characters' NODE_ENV=test PORT=5001 node backend/server.js > /tmp/xtn-api.log 2>&1 &
           for attempt in $(seq 1 60); do curl --fail http://127.0.0.1:5001/health/ready && break; sleep 1; done
           curl --fail http://127.0.0.1:5001/health/ready
-      - run: cd frontend && npx playwright install --with-deps chromium && npm run test:e2e
+      - run: cd frontend && npx playwright install --with-deps chromium firefox webkit && npm run test:e2e && npx playwright test responsive.spec.ts --browser=all
       - name: Real production containers, HTTPS, backup, restore and rollback
         run: python3 scripts/verify-production.py
       - uses: actions/upload-artifact@v4

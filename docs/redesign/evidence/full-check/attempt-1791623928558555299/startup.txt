@@ -1,0 +1,7 @@
+missing DB: rejected before listen
+weak JWT: rejected before listen
+wildcard CORS: rejected before listen
+production CORS required: rejected before listen
+invalid proxy trust: rejected before listen
+invalid port: rejected before listen
+standalone Mongo: rejected before listen

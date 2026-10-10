@@ -55,7 +55,15 @@ function createApp(config) {
         message: "Quá nhiều yêu cầu; vui lòng thử lại sau",
       },
     });
-  app.use("/api/v1/auth", limit(20), authRoutes(config));
+  app.use(["/api/v1/auth/login", "/api/v1/auth/register"], limit(20));
+  app.use(
+    "/api/v1/auth",
+    limit(2000),
+    authRoutes(
+      config,
+      limit(300, (req) => `actor:${req.actor.id}`),
+    ),
+  );
   app.use(
     "/api/v1",
     limit(2000),

@@ -10,6 +10,23 @@
 body {
   margin: 0;
 }
+.app-shell > main,
+.panel,
+.field,
+.page-heading > *,
+.stat-grid > *,
+.kanban > * {
+  min-width: 0;
+}
+h1,
+h2,
+h3,
+p,
+strong,
+.notice,
+td {
+  overflow-wrap: anywhere;
+}
 button,
 input,
 select,
@@ -125,6 +142,7 @@ small {
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow-y: auto;
 }
 .sidebar .eyebrow {
   color: #96ad91;
@@ -253,6 +271,8 @@ small {
 }
 .table-wrap {
   overflow-x: auto;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
 }
 table {
   min-width: 680px;
@@ -286,6 +306,7 @@ tr:last-child td {
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 .inset {
   margin: 14px 0;
@@ -364,7 +385,7 @@ tr:last-child td {
     padding: 24px 20px;
   }
   .app-shell {
-    grid-template-columns: 190px 1fr;
+    grid-template-columns: 190px minmax(0, 1fr);
   }
   .stat-value {
     font-size: 21px;
@@ -393,6 +414,9 @@ tr:last-child td {
   .sidebar nav a {
     white-space: nowrap;
     padding: 9px 12px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
   .sidebar .eyebrow {
     display: none;
@@ -403,6 +427,7 @@ tr:last-child td {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
   }
   .profile button {
     margin-top: 0;
@@ -417,10 +442,9 @@ tr:last-child td {
   }
   .panel {
     padding: 17px;
-    overflow: auto;
   }
   .stat-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .stat-value {
     font-size: 20px;
@@ -439,8 +463,46 @@ tr:last-child td {
   }
   .login-form {
     margin: 25px auto;
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 22px;
   }
   .kanban {
     grid-template-columns: 1fr;
+  }
+  input,
+  select,
+  textarea {
+    min-width: 0;
+    font-size: 16px;
+    min-height: 44px;
+  }
+  button {
+    min-height: 44px;
+  }
+  .filters {
+    width: 100%;
+  }
+  .filters .field {
+    flex: 1 1 150px;
+  }
+  .page-controls {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 360px) {
+  .stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .form-grid,
+  .catalog {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
   }
 }

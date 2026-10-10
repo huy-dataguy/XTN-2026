@@ -118,7 +118,12 @@ export default function InventoryPage({ user }: { user: User }) {
       )}
       {query.error && <ErrorNotice error={query.error} />}
       <Card>
-        <div className="table-wrap">
+        <div
+          className="table-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
+        >
           <table>
             <thead>
               <tr>

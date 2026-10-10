@@ -57,26 +57,33 @@ export default function Orders({ user }: { user: User }) {
             </div>
             <Badge>{order.status}</Badge>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Sản phẩm</th>
-                <th>Yêu cầu</th>
-                <th>Đã nhận</th>
-                <th>Giá bán</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.items.map((item) => (
-                <tr key={item.productId}>
-                  <td>{item.productName}</td>
-                  <td>{item.quantity}</td>
-                  <td>{item.receivedQuantity}</td>
-                  <td>{money(item.price)}</td>
+          <div
+            className="table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>Sản phẩm</th>
+                  <th>Yêu cầu</th>
+                  <th>Đã nhận</th>
+                  <th>Giá bán</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {order.items.map((item) => (
+                  <tr key={item.productId}>
+                    <td>{item.productName}</td>
+                    <td>{item.quantity}</td>
+                    <td>{item.receivedQuantity}</td>
+                    <td>{money(item.price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p>
             Giá trị cấp hàng: <strong>{money(order.totalAmount)}</strong>
           </p>

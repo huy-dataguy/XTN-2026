@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "browsers": [
+    "Chromium",
+    "Firefox",
+    "WebKit"
+  ],
+  "widths": [
+    320,
+    375,
+    390,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "roles": [
+    "admin",
+    "member"
+  ],
+  "pageViewportChecks": 231,
+  "checks": [
+    "login",
+    "navigation",
+    "no page overflow",
+    "mobile touch target minimum 44px",
+    "keyboard table scrolling",
+    "no JS errors"
+  ],
+  "scope": "Real browser engines on isolated Mongo fixture; responsive viewport emulation, not every physical device."
+}

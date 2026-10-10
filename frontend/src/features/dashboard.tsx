@@ -118,7 +118,12 @@ export default function Dashboard({ user }: { user: User }) {
           </p>
           <Card>
             <h2>Tổng kết thành viên trong khoảng tuần</h2>
-            <div className="table-wrap">
+            <div
+              className="table-wrap"
+              tabIndex={0}
+              role="region"
+              aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
+            >
               <table>
                 <thead>
                   <tr>
@@ -166,7 +171,12 @@ export default function Dashboard({ user }: { user: User }) {
           </Card>
           <Card>
             <h2>Chi tiết từng tuần</h2>
-            <div className="table-wrap">
+            <div
+              className="table-wrap"
+              tabIndex={0}
+              role="region"
+              aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
+            >
               <table>
                 <thead>
                   <tr>

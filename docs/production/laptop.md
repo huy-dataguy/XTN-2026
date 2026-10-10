@@ -14,6 +14,9 @@ vẫn theo [hợp đồng nghiệp vụ](../redesign/implementation-contract.md)
 
 Đã kiểm tra đăng nhập, chặn truy cập không đăng nhập, API và sáu trang giao diện
 bằng Chromium trên chính bản này: [laptop-runtime.json](laptop-runtime.json).
+
+Layout điện thoại/tablet/desktop và kiểm chứng nhiều browser:
+[UI/UX responsive](responsive.md).
 Bộ test giao dịch có ghi dữ liệu chạy trong DB riêng; không tạo đơn giả trong DB
 sử dụng thật. Xem [kiểm chứng nghiệp vụ/khôi phục](README.md).
 

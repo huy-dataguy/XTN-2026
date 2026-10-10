@@ -99,60 +99,71 @@ export default function Members() {
       </Card>
       {query.error && <ErrorNotice error={query.error} />}
       <Card>
-        <table>
-          <thead>
-            <tr>
-              <th>Thành viên</th>
-              <th>Nhóm / quyền</th>
-              <th>Tài khoản</th>
-              <th>Mục tiêu & gia hạn</th>
-            </tr>
-          </thead>
-          <tbody>
-            {query.data?.items.map((user) => (
-              <tr key={user.id}>
-                <td>
-                  <strong>{user.name}</strong>
-                  <small>{user.username}</small>
-                </td>
-                <td>
-                  {user.group || "—"}
-                  <small>{user.role}</small>
-                </td>
-                <td>
-                  <button
-                    disabled={write.isPending}
-                    onClick={() =>
-                      write.mutate({
-                        path: `/users/${user.id}`,
-                        method: "PUT",
-                        body: { active: !user.active },
-                      })
-                    }
-                  >
-                    {user.active ? "Khóa tài khoản" : "Mở tài khoản"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      const password = prompt("Mật khẩu mới, ít nhất 12 ký tự");
-                      if (password)
-                        write.mutate({
-                          path: `/users/${user.id}/password`,
-                          method: "PUT",
-                          body: { password },
-                        });
-                    }}
-                  >
-                    Đổi mật khẩu
-                  </button>
-                </td>
-                <td>
-                  {user.role === "DISTRIBUTOR" && <MemberPeriod user={user} />}
-                </td>
+        <div
+          className="table-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>Thành viên</th>
+                <th>Nhóm / quyền</th>
+                <th>Tài khoản</th>
+                <th>Mục tiêu & gia hạn</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {query.data?.items.map((user) => (
+                <tr key={user.id}>
+                  <td>
+                    <strong>{user.name}</strong>
+                    <small>{user.username}</small>
+                  </td>
+                  <td>
+                    {user.group || "—"}
+                    <small>{user.role}</small>
+                  </td>
+                  <td>
+                    <button
+                      disabled={write.isPending}
+                      onClick={() =>
+                        write.mutate({
+                          path: `/users/${user.id}`,
+                          method: "PUT",
+                          body: { active: !user.active },
+                        })
+                      }
+                    >
+                      {user.active ? "Khóa tài khoản" : "Mở tài khoản"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const password = prompt(
+                          "Mật khẩu mới, ít nhất 12 ký tự",
+                        );
+                        if (password)
+                          write.mutate({
+                            path: `/users/${user.id}/password`,
+                            method: "PUT",
+                            body: { password },
+                          });
+                      }}
+                    >
+                      Đổi mật khẩu
+                    </button>
+                  </td>
+                  <td>
+                    {user.role === "DISTRIBUTOR" && (
+                      <MemberPeriod user={user} />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
       {query.data && (
         <PageControls

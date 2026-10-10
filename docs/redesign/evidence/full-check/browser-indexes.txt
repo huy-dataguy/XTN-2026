@@ -4,7 +4,7 @@
     "001-query-indexes",
     "002-list-query-indexes"
   ],
-  "database": "xtn_refactor_test_browser_1791618231299905460",
+  "database": "xtn_refactor_test_browser_1791624071251966966",
   "mode": "apply",
   "changes": [
     {

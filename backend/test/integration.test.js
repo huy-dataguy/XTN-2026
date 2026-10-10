@@ -1346,3 +1346,56 @@ test("weekly detail pagination never changes organization totals; inventory carr
   assert.equal(result.totals.revenue, 20000);
   assert.equal(result.rows[0].received, 0);
 });
+
+test("session refresh does not consume the public login rate limit", async () => {
+  const username = `rate-test-${randomUUID()}`;
+  await m.User.create({
+    username,
+    name: "Rate limit verification",
+    role: "DISTRIBUTOR",
+    password: await bcrypt.hash("fixture-password-2026", 4),
+  });
+  const isolated = createApp({
+    jwtSecret: "fixture-secret-that-is-more-than-32-characters",
+    inviteCode: null,
+    origins: ["http://127.0.0.1:5173"],
+    logRequests: false,
+  }).listen(0, "127.0.0.1");
+  await new Promise((resolve) => isolated.once("listening", resolve));
+  const url = `http://127.0.0.1:${isolated.address().port}/api/v1/auth`;
+  try {
+    const login = await fetch(url + "/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password: "fixture-password-2026" }),
+    });
+    assert.equal(login.status, 200);
+    const { token } = await login.json();
+    for (let i = 0; i < 30; i++) {
+      const me = await fetch(url + "/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      assert.equal(me.status, 200);
+      await me.arrayBuffer();
+    }
+    for (let i = 0; i < 20; i++) {
+      const bad = await fetch(url + "/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password: "wrong-password" }),
+      });
+      assert.equal(bad.status, i < 19 ? 401 : 429);
+      await bad.arrayBuffer();
+    }
+    assert.equal(
+      (
+        await fetch(url + "/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ).status,
+      200,
+    );
+  } finally {
+    await new Promise((resolve) => isolated.close(resolve));
+  }
+});

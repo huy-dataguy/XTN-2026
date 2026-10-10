@@ -59,7 +59,7 @@ và kiểm thử phục hồi request; chưa có tuyên bố ứng dụng chịu
 
 Xem [verification.json](evidence/full-check/verification.json) và
 [local-runtime.json](evidence/full-check/local-runtime.json). Bộ kiểm chứng hiện gồm
-21 ca backend (4 domain, 17 Mongo/HTTP), 4 luồng Chromium trên bản build, 7 startup
+22 ca backend (4 domain, 18 Mongo/HTTP), 4 luồng nghiệp vụ và một bài responsive Chromium trên bản build, 7 startup
 rejection gates, đối soát độc lập ledger/kho/reservations/doanh thu, và kiểm tra
 6 trang quản trị trên dev app cùng độ bền dữ liệu qua restart Mongo local.
 

@@ -1,0 +1,16 @@
+[WebServer] (node:1490724) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:1490788) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop (40.1s)
+(node:1493512) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [firefox] › e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop (1.4m)
+(node:1500107) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [webkit] › e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop (41.7s)
+
+  3 passed (2.9m)

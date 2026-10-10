@@ -129,7 +129,7 @@ function Application() {
           XTN <span>2026</span>
         </div>
         <p className="eyebrow">CÙNG NHAU TẠO KẾT QUẢ</p>
-        <nav>
+        <nav aria-label="Điều hướng chính">
           {links.map(([path, label]) => (
             <NavLink key={path} to={path} end={path === "/"}>
               {label}

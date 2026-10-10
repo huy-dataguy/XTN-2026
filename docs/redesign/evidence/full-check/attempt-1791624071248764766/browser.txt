@@ -1,0 +1,54 @@
+
+> frontend@0.0.0 test:e2e
+> playwright test
+
+[WebServer] (node:1473076) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:1473124) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/commerce.spec.ts:16:1 › admin creates stock; member requests, receives, reports; server-derived dashboard agrees (5.1s)
+  ✓  2 e2e/commerce.spec.ts:95:1 › admin manages member targets, cash reference and internal work (2.2s)
+  ✓  3 e2e/commerce.spec.ts:146:1 › approved correction preserves history and recalculates member stock and revenue (2.6s)
+  ✓  4 e2e/commerce.spec.ts:182:1 › finance tags filter without double counting; void and task archive are effective (1.9s)
+  ✘  5 e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop (7.5s)
+
+
+  1) e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop ───────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('main h1')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('main h1') with timeout 5000ms
+      - waiting for locator('main h1')
+
+
+      41 |       for (const path of paths) {
+      42 |         await page.goto(path);
+    > 43 |         await expect(page.locator("main h1")).toBeVisible();
+         |                                               ^
+      44 |         await expect(page.getByRole("status")).toHaveCount(0);
+      45 |         await expect(page.getByRole("alert")).toHaveCount(0);
+      46 |         expect(
+        at /home/dataguy/Documents/projects/vovinam/XTN-2026/frontend/e2e/responsive.spec.ts:43:47
+
+    Error Context: test-results/responsive-admin-and-membe-0f2db-rom-small-phones-to-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/responsive-admin-and-membe-0f2db-rom-small-phones-to-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/responsive-admin-and-membe-0f2db-rom-small-phones-to-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop ────────
+  4 passed (20.4s)

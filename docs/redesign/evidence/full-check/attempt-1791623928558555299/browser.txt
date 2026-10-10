@@ -1,0 +1,49 @@
+
+> frontend@0.0.0 test:e2e
+> playwright test
+
+[WebServer] (node:1462758) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:1462826) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/commerce.spec.ts:16:1 › admin creates stock; member requests, receives, reports; server-derived dashboard agrees (5.4s)
+  ✓  2 e2e/commerce.spec.ts:95:1 › admin manages member targets, cash reference and internal work (1.9s)
+  ✓  3 e2e/commerce.spec.ts:146:1 › approved correction preserves history and recalculates member stock and revenue (2.7s)
+  ✓  4 e2e/commerce.spec.ts:182:1 › finance tags filter without double counting; void and task archive are effective (1.8s)
+  ✘  5 e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop (1.9s)
+
+
+  1) e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop ───────
+
+    Error: admin /orders width 320: page overflow
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      49 |           ),
+      50 |           `${username} ${path} width ${width}: page overflow`,
+    > 51 |         ).toBe(true);
+         |           ^
+      52 |         if (width <= 700) {
+      53 |           const controls = await page
+      54 |             .locator("input, select, textarea, button, nav a")
+        at /home/dataguy/Documents/projects/vovinam/XTN-2026/frontend/e2e/responsive.spec.ts:51:11
+
+    Error Context: test-results/responsive-admin-and-membe-0f2db-rom-small-phones-to-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/responsive-admin-and-membe-0f2db-rom-small-phones-to-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/responsive-admin-and-membe-0f2db-rom-small-phones-to-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    e2e/responsive.spec.ts:3:1 › admin and member pages reflow from small phones to desktop ────────
+  4 passed (15.2s)

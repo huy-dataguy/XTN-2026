@@ -59,28 +59,35 @@ export default function Reports({ user }: { user: User }) {
             </div>
             <Badge>{report.status}</Badge>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Ngày phát sinh</th>
-                <th>Bán</th>
-                <th>Hư mới</th>
-                <th>Tặng tốt</th>
-                <th>Tặng hư</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.lines.map((line, i) => (
-                <tr key={i}>
-                  <td>{date(line.effectiveAt)}</td>
-                  <td>{line.sold}</td>
-                  <td>{line.damaged}</td>
-                  <td>{line.giftGood}</td>
-                  <td>{line.giftDamaged}</td>
+          <div
+            className="table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>Ngày phát sinh</th>
+                  <th>Bán</th>
+                  <th>Hư mới</th>
+                  <th>Tặng tốt</th>
+                  <th>Tặng hư</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {report.lines.map((line, i) => (
+                  <tr key={i}>
+                    <td>{date(line.effectiveAt)}</td>
+                    <td>{line.sold}</td>
+                    <td>{line.damaged}</td>
+                    <td>{line.giftGood}</td>
+                    <td>{line.giftDamaged}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p>{report.notes}</p>
           <div className="actions">
             {report.status === "PENDING" && (

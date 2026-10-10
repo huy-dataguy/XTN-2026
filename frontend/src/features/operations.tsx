@@ -210,58 +210,65 @@ export function Finance() {
       </Card>
       {query.error && <ErrorNotice error={query.error} />}
       <Card>
-        <table>
-          <thead>
-            <tr>
-              <th>Ngày / mã</th>
-              <th>Đối tác</th>
-              <th>Số tiền</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {query.data?.items.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  {date(item.transactionDate)}
-                  <small>{item.reference}</small>
-                </td>
-                <td>
-                  {item.partnerName}
-                  <small>{item.description}</small>
-                  <small>
-                    {item.tags
-                      ?.map(
-                        (id) =>
-                          tags.data?.items.find((t) => t.id === id)?.name ||
-                          "Nhãn lưu trữ",
-                      )
-                      .join(", ")}
-                  </small>
-                </td>
-                <td>
-                  {item.type === "IN" ? "+" : "−"}
-                  {money(item.amount)}
-                </td>
-                <td>
-                  <button
-                    disabled={write.isPending}
-                    onClick={() => {
-                      const reason = prompt("Lý do hủy hiệu lực giao dịch");
-                      if (reason)
-                        write.mutate({
-                          path: `/statements/${item.id}/void`,
-                          body: { reason },
-                        });
-                    }}
-                  >
-                    Hủy hiệu lực
-                  </button>
-                </td>
+        <div
+          className="table-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>Ngày / mã</th>
+                <th>Đối tác</th>
+                <th>Số tiền</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {query.data?.items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    {date(item.transactionDate)}
+                    <small>{item.reference}</small>
+                  </td>
+                  <td>
+                    {item.partnerName}
+                    <small>{item.description}</small>
+                    <small>
+                      {item.tags
+                        ?.map(
+                          (id) =>
+                            tags.data?.items.find((t) => t.id === id)?.name ||
+                            "Nhãn lưu trữ",
+                        )
+                        .join(", ")}
+                    </small>
+                  </td>
+                  <td>
+                    {item.type === "IN" ? "+" : "−"}
+                    {money(item.amount)}
+                  </td>
+                  <td>
+                    <button
+                      disabled={write.isPending}
+                      onClick={() => {
+                        const reason = prompt("Lý do hủy hiệu lực giao dịch");
+                        if (reason)
+                          write.mutate({
+                            path: `/statements/${item.id}/void`,
+                            body: { reason },
+                          });
+                      }}
+                    >
+                      Hủy hiệu lực
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
       {query.data && (
         <PageControls

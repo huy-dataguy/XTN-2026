@@ -34,7 +34,7 @@ function authentication(config) {
     }
   };
 }
-function authRoutes(config) {
+function authRoutes(config, authenticatedLimit) {
   const router = Router();
   router.post("/login", async (req, res) => {
     const input = parse(
@@ -94,6 +94,7 @@ function authRoutes(config) {
     res.status(201).json(entity(user));
   });
   router.use(authentication(config));
+  if (authenticatedLimit) router.use(authenticatedLimit);
   router.get("/me", (req, res) => res.json(req.actor));
   router.post("/logout", async (req, res) => {
     await User.updateOne({ _id: req.actor.id }, { $inc: { tokenVersion: 1 } });

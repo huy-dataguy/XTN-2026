@@ -36,6 +36,8 @@ def run(name, args, cwd=ROOT, env=None):
 try:
     for port in [5001,5174]:
         with socket.socket() as probe:
+            # A stopped preview/API can leave TIME_WAIT sockets between runs.
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             probe.bind(('127.0.0.1',port))
     run('startup', ['node','scripts/verify-startup.cjs'])
     run('indexes', ['node','scripts/migrate-indexes.cjs','--apply'], env={'MIGRATION_MONGO_URI':TEST_URI})
