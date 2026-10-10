@@ -32,7 +32,7 @@ write(secret_dir/'admin-password',password+'\n')
 values={'COMPOSE_PROJECT_NAME':'xtn-prod-verify' if a.verify else 'xtn-prod','DEPLOY_DIR':str(target),'SITE_ADDRESS':domain,'CORS_ORIGINS':f'https://{domain}'+(':18443' if a.verify else ''),'HTTP_BIND':'127.0.0.1' if a.verify else '0.0.0.0','HTTP_PORT':'18080' if a.verify else '80','HTTPS_PORT':'18443' if a.verify else '443','MONGO_APP_PASSWORD':app,'JWT_SECRET':secrets.token_hex(48),'ADMIN_USERNAME':'admin','DEPLOY_UID':str(os.getuid()),'DEPLOY_GID':str(os.getgid())}
 if a.laptop:
     values.update(SITE_ADDRESS='http://:80', CORS_ORIGINS='http://localhost:8080,http://127.0.0.1:8080',
-                  HTTP_BIND='127.0.0.1', HTTP_PORT='8080', HTTPS_PORT='18445')
+                  HTTP_BIND='127.0.0.1', HTTP_PORT='8080', HTTPS_PORT='18445', CONTAINER_RESTART='no')
 write(target/'env',''.join(f'{k}={v}\n' for k,v in values.items()))
 write(target/'admin-credentials.json',json.dumps({'username':'admin','password':password},indent=2)+'\n')
 print(f'Private configuration created: {target}/env; administrator credentials: {target}/admin-credentials.json')

@@ -26,7 +26,7 @@ services:
     volumes:
       - mongo-data:/data/db
       - ./production:/opt/xtn:ro
-    restart: unless-stopped
+    restart: "${CONTAINER_RESTART:-unless-stopped}"
     mem_limit: 1536m
     healthcheck:
       test: [CMD, mongosh, --quiet, --file, /opt/xtn/mongo-health.js]
@@ -72,7 +72,7 @@ services:
     <<: *api-image
     environment: *api-env
     depends_on: {migrate: {condition: service_completed_successfully}}
-    restart: unless-stopped
+    restart: "${CONTAINER_RESTART:-unless-stopped}"
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -93,7 +93,7 @@ services:
       - "${HTTP_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443"
     volumes: ["caddy-data:/data", "caddy-config:/config"]
     depends_on: {api: {condition: service_healthy}}
-    restart: unless-stopped
+    restart: "${CONTAINER_RESTART:-unless-stopped}"
     cap_drop: [ALL]
     cap_add: [NET_BIND_SERVICE]
     security_opt: [no-new-privileges:true]

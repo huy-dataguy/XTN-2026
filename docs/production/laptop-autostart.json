@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "autostart": false,
+  "restartPolicies": {
+    "xtn-prod-api-1": "no",
+    "xtn-prod-web-1": "no",
+    "xtn-prod-mongo-1": "no",
+    "xtn-local-mongo-1": "no"
+  },
+  "scheduledBackup": false,
+  "scheduledHealth": false,
+  "dataPreserved": true,
+  "globalDockerSettingsUnchanged": true
+}

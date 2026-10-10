@@ -32,34 +32,37 @@ python3 scripts/verify-full.py
 
 ## Khởi động và vận hành
 
-Docker daemon đã được bật tự khởi động trên laptop; API/web/Mongo dùng
-`restart: unless-stopped`. Nếu chủ động dừng bằng `stop`, dùng `up` để bật lại:
+Ứng dụng trên laptop dùng `restart: "no"`: không tự bật khi mở máy hoặc khi Docker
+khởi động lại. Các lịch backup/health đã được tắt theo yêu cầu. Docker và thiết lập
+user manager chung của máy giữ nguyên để phục vụ các dự án khác.
+Khi cần sử dụng, chạy thủ công tại thư mục dự án:
 
 ```bash
 bash scripts/production.sh up
 bash scripts/production.sh status
 bash scripts/production.sh logs
 python3 scripts/production-health.py
+# Dừng khi dùng xong:
+bash scripts/production.sh stop
 ```
 
 Mongo giữ `nofile` 64.000; dữ liệu lưu trong volume qua các lần restart.
 Không chạy `docker compose down -v`, không xóa volume. Đã thử restart container
 và đăng nhập/đọc lại bản chạy thật; chưa reboot toàn bộ laptop trong lúc làm việc.
-Laptop ngủ hoặc tắt thì dịch vụ không truy cập được cho tới khi máy hoạt động lại.
+Sau khi tắt/bật máy, chạy `up` để sử dụng lại. Đổi chế độ laptop đã cấu hình trước:
+`python3 scripts/disable-laptop-autostart.py`; lệnh giữ nguyên dữ liệu và các
+container đang chạy, chỉ tắt restart policy cùng lịch tự động.
 
-## Backup tự động trên laptop
+## Backup thủ công trên laptop
 
-Đã cài **user timers** `xtn-laptop-backup.timer` và `xtn-laptop-health.timer`:
-backup hằng ngày 02:30 giờ Việt Nam, kiểm tra readiness và tuổi backup mỗi 5 phút.
-User `dataguy` đã có `Linger=yes`, nên user manager được chạy khi boot mà không
-cần mở terminal. Backup có `Persistent=true` để bắt kịp lịch bỏ lỡ. Timer không
-đánh thức máy ngủ; công việc tiếp tục khi máy hoạt động lại.
+`xtn-laptop-backup.timer` và `xtn-laptop-health.timer` hiện disabled và inactive.
+Trạng thái hiện tại được kiểm chứng tại [laptop-autostart.json](laptop-autostart.json).
+Các bằng chứng bật lịch/restart trước đây trong `laptop-operations.json` là lịch sử,
+không phải cấu hình hiện tại. Chạy backup/health khi cần:
 
 ```bash
-systemctl --user list-timers 'xtn-laptop-*'
-journalctl --user -u xtn-laptop-backup.service -u xtn-laptop-health.service --since today
-# Backup ngay qua cùng service của timer:
-systemctl --user start xtn-laptop-backup.service
+bash scripts/production.sh backup
+python3 scripts/production-health.py
 ```
 
 Backup lưu ở `.local/production/backups/`, kèm manifest SHA-256. API tạm dừng trong
@@ -77,7 +80,6 @@ Khôi phục và release/rollback theo [runbook](README.md); mặc định mọi
 python3 scripts/prepare-production.py --laptop
 bash scripts/production.sh init
 bash scripts/production.sh backup
-python3 scripts/install-laptop-timers.py
 ```
 
 Không chạy prepare trên cấu hình đã tồn tại; script không ghi đè secrets. Nếu
