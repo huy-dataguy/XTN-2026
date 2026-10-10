@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "verifiedAtUTC": "2026-10-10T07:43:56.999Z",
+  "origin": "http://localhost:8080",
+  "administratorIdentityPreserved": true,
+  "unauthenticatedAccess": "blocked",
+  "browserPages": 6,
+  "checks": [
+    {
+      "endpoint": "orders",
+      "status": 200,
+      "rows": 0
+    },
+    {
+      "endpoint": "reports",
+      "status": 200,
+      "rows": 0
+    },
+    {
+      "endpoint": "inventory",
+      "status": 200,
+      "rows": 0
+    },
+    {
+      "endpoint": "users",
+      "status": 200,
+      "rows": 1
+    },
+    {
+      "endpoint": "statements",
+      "status": 200,
+      "rows": 0
+    },
+    {
+      "endpoint": "tasks",
+      "status": 200,
+      "rows": 0
+    }
+  ],
+  "jsErrors": [],
+  "failedResponses": [],
+  "scope": "Real laptop production DB; read-only business acceptance. Synthetic workflows stay in the separate test databases."
+}

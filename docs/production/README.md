@@ -1,5 +1,8 @@
 # Production tối thiểu trên một VPS
 
+Nếu dùng chính laptop làm máy production, bản chạy thật và lịch backup đã được
+cài theo [hướng dẫn laptop](laptop.md), địa chỉ **http://localhost:8080**.
+
 Bản này phù hợp hệ thống nội bộ cấp hàng, bán hàng và báo cáo của nhóm: một VPS,
 MongoDB local có xác thực và replica set một node, API Express và giao diện qua
 Caddy HTTPS. Không yêu cầu Mongo Cloud. Mongo/API không mở cổng ra Internet.

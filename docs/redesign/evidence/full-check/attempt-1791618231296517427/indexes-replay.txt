@@ -4,7 +4,7 @@
     "001-query-indexes",
     "002-list-query-indexes"
   ],
-  "database": "xtn_refactor_test_browser_1791618231299905460",
+  "database": "xtn_refactor_test_run1791613927174674011",
   "mode": "apply",
   "changes": [
     {
@@ -15,7 +15,7 @@
         "effectiveAt": 1,
         "lotId": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "inventorymovements",
@@ -26,7 +26,7 @@
         "periodId": 1,
         "sourceId": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "inventorymovements",
@@ -35,7 +35,7 @@
         "sourceId": 1,
         "kind": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "reports",
@@ -45,7 +45,7 @@
         "periodId": 1,
         "status": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "receipts",
@@ -54,7 +54,7 @@
         "memberId": 1,
         "effectiveAt": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "memberperiods",
@@ -63,7 +63,7 @@
         "periodId": 1,
         "memberId": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "orders",
@@ -73,7 +73,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "users",
@@ -83,7 +83,7 @@
         "createdAt": 1,
         "_id": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "products",
@@ -92,7 +92,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "users",
@@ -101,7 +101,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "orders",
@@ -110,7 +110,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "reports",
@@ -119,7 +119,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "statement1",
@@ -128,7 +128,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "tasks",
@@ -137,7 +137,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "tags",
@@ -146,7 +146,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "orders",
@@ -157,7 +157,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "orders",
@@ -167,7 +167,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "reports",
@@ -178,7 +178,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "reports",
@@ -188,7 +188,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "users",
@@ -196,7 +196,7 @@
       "key": {
         "username": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "reports",
@@ -206,7 +206,7 @@
         "status": 1,
         "schemaVersion": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "statement1",
@@ -214,7 +214,7 @@
       "key": {
         "reference": 1
       },
-      "status": "created"
+      "status": "already-present"
     },
     {
       "collection": "statement1",
@@ -224,7 +224,7 @@
         "createdAt": -1,
         "_id": -1
       },
-      "status": "created"
+      "status": "already-present"
     }
   ]
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Public HTTPS readiness plus backup freshness. No secret values are logged."""
+"""Configured-origin readiness plus backup freshness. No secret values are logged."""
 import datetime,json,os,ssl,time,urllib.request
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
@@ -20,7 +20,7 @@ try:
  latest=max(datetime.datetime.fromisoformat(item['createdAtUTC']) for item in manifests)
  age=(datetime.datetime.now(datetime.timezone.utc)-latest).total_seconds()
  assert age<48*3600,'Backup is older than 48 hours'
- print(json.dumps({'status':'passed','httpsReady':True,'latencyMs':round((time.monotonic()-start)*1000),'backupAgeHours':round(age/3600,2)}))
+ print(json.dumps({'status':'passed','ready':True,'transport':'https' if origin.startswith('https:') else 'http-local','latencyMs':round((time.monotonic()-start)*1000),'backupAgeHours':round(age/3600,2)}))
 except Exception as error:
  print(json.dumps({'status':'failed','error':str(error)}))
  raise SystemExit(1)

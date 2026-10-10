@@ -13,6 +13,9 @@ Chạy nhanh: [MongoDB local + toàn dự án](docs/redesign/local-development.m
 Triển khai tối thiểu: [Docker + Mongo local + HTTPS, backup và rollback](docs/production/README.md).
 Đã chạy và kiểm chứng stack production trên máy local; chưa triển khai lên VPS public.
 
+Bản sử dụng thật trên laptop hiện tại: **http://localhost:8080**.
+Xem [vận hành laptop, tài khoản và backup tự động](docs/production/laptop.md).
+
 Đọc [runbook](docs/redesign/refactor-runbook.md) để cấu hình, tạo quản trị ban đầu, chạy backend/frontend và kiểm thử. Xem [hồ sơ phân tích](docs/redesign/README.md), [quy tắc nghiệp vụ](docs/redesign/implementation-contract.md), [hợp đồng dữ liệu](docs/redesign/data-contract.md) và [bằng chứng kiểm chứng](docs/redesign/evidence/full-check/verification.json).
 
 Đơn có thể nhận nhiều đợt; báo cáo ghi phần phát sinh, không ghi tổng lũy kế. Tuần hoạt động tách riêng ngày nộp báo cáo và gia hạn. Giá bán/giá vốn lưu tại lô nhận, thiếu giá vốn trả kết quả chưa xác định. KPI nhiều tuần = tổng doanh thu / tổng mục tiêu, chỉ kết luận khi dữ liệu đầy đủ.

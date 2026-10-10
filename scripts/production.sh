@@ -3,7 +3,7 @@ set -euo pipefail
 umask 077
 xtn_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 xtn_dir="${XTN_DEPLOY_DIR:-$xtn_root/.local/production}"
-[[ -f "$xtn_dir/env" ]] || { echo 'Prepare private configuration first: python3 scripts/prepare-production.py --domain example.com' >&2; exit 1; }
+[[ -f "$xtn_dir/env" ]] || { echo 'Prepare private configuration first: python3 scripts/prepare-production.py --laptop (or --domain example.com)' >&2; exit 1; }
 xtn_compose=(docker compose --env-file "$xtn_dir/env" -f "$xtn_root/infra/compose.production.yml")
 exec 9>"$xtn_dir/operation.lock"
 flock -n 9 || { echo 'Another deployment/backup/restore is running.' >&2; exit 1; }

@@ -17,4 +17,4 @@ dist/assets/operations-CGi1eFFm.js    7.21 kB │ gzip:   2.33 kB
 dist/assets/dashboard-wXD5X-qy.js     7.25 kB │ gzip:   2.44 kB
 dist/assets/index-CDh3SsNR.js       382.06 kB │ gzip: 117.97 kB
 
-✓ built in 310ms
+✓ built in 321ms

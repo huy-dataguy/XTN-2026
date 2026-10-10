@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "verifiedAtUTC": "2026-10-10T07:43:57Z",
+  "origin": "http://localhost:8080",
+  "dockerBootEnabled": true,
+  "restartPolicies": [
+    {
+      "container": "xtn-prod-mongo-1",
+      "restart": "unless-stopped"
+    },
+    {
+      "container": "xtn-prod-api-1",
+      "restart": "unless-stopped"
+    },
+    {
+      "container": "xtn-prod-web-1",
+      "restart": "unless-stopped"
+    }
+  ],
+  "actualContainerRestartSeconds": 2.09,
+  "administratorIdentityPreserved": true,
+  "backupAndHealthTimers": "enabled_and_active",
+  "userLinger": true,
+  "scope": "Actual laptop production installation, browser, backup service and container restart; no operating-system reboot was performed."
+}

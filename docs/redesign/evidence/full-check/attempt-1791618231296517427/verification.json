@@ -1,8 +1,8 @@
 {
   "status": "passed",
-  "verifiedAtUTC": "2026-10-10T07:44:49.595358+00:00",
-  "testDatabase": "xtn_refactor_test_run1791618231299905460",
-  "browserDatabase": "xtn_refactor_test_browser_1791618231299905460",
+  "verifiedAtUTC": "2026-10-10T06:33:02.548633+00:00",
+  "testDatabase": "xtn_refactor_test_run1791613927174674011",
+  "browserDatabase": "xtn_refactor_test_browser_1791613927174674011",
   "steps": [
     {
       "name": "startup",
@@ -12,7 +12,7 @@
       ],
       "cwd": ".",
       "exitCode": 0,
-      "seconds": 4.61,
+      "seconds": 3.88,
       "log": "startup.txt"
     },
     {
@@ -24,7 +24,7 @@
       ],
       "cwd": ".",
       "exitCode": 0,
-      "seconds": 0.69,
+      "seconds": 0.71,
       "log": "indexes.txt"
     },
     {
@@ -36,7 +36,7 @@
       ],
       "cwd": ".",
       "exitCode": 0,
-      "seconds": 0.32,
+      "seconds": 0.3,
       "log": "indexes-replay.txt"
     },
     {
@@ -47,7 +47,7 @@
       ],
       "cwd": "backend",
       "exitCode": 0,
-      "seconds": 4.16,
+      "seconds": 4.25,
       "log": "backend.txt"
     },
     {
@@ -59,7 +59,7 @@
       ],
       "cwd": "frontend",
       "exitCode": 0,
-      "seconds": 2.07,
+      "seconds": 2.1,
       "log": "typecheck.txt"
     },
     {
@@ -83,7 +83,7 @@
       ],
       "cwd": "frontend",
       "exitCode": 0,
-      "seconds": 2.64,
+      "seconds": 2.62,
       "log": "build.txt"
     },
     {
@@ -95,7 +95,7 @@
       ],
       "cwd": "backend",
       "exitCode": 0,
-      "seconds": 0.68,
+      "seconds": 0.67,
       "log": "backend-audit.txt"
     },
     {
@@ -119,7 +119,7 @@
       ],
       "cwd": ".",
       "exitCode": 0,
-      "seconds": 0.69,
+      "seconds": 0.67,
       "log": "browser-indexes.txt"
     },
     {
@@ -142,7 +142,7 @@
       ],
       "cwd": "frontend",
       "exitCode": 0,
-      "seconds": 13.98,
+      "seconds": 13.4,
       "log": "browser.txt"
     },
     {
@@ -153,7 +153,7 @@
       ],
       "cwd": ".",
       "exitCode": 0,
-      "seconds": 24.41,
+      "seconds": 22.72,
       "log": "election.txt"
     }
   ],
@@ -214,19 +214,17 @@
     "infra/production/xtn-health.timer": "2f33cfc9003087805b7540b0fee64daa010bd4f5651ceb61090480b859520ee7",
     "scripts/exercise-scale.cjs": "1bea3c12d65057f636f75f096e2c52b15eeb0b12b774650e329cc9cbf9871a91",
     "scripts/inspect-query-plans.cjs": "40f92519804a4977da554031c6576088428fa7ba0f1422c3011f28e920997f21",
-    "scripts/install-laptop-timers.py": "ef7e6e1f2cab79394c876cc18822af23e636287f51f89ffb000e712ed19e270f",
     "scripts/measure-scale.cjs": "6978c3ec0197b389bf864ac8e5415ab5c55746befeae27a9e82e8169221ee45a",
     "scripts/migrate-indexes.cjs": "838de064a213f90a97fc7eb3e44ebb2e9bcea8f499ac0b850620f615cbc4f7a1",
-    "scripts/prepare-production.py": "bb8b16fe0186a06276fcc90d0e99875f4f8729be9b15bba92ec9f607d95553d9",
-    "scripts/production-health.py": "7a8e367efed28a3173a88cdd7b22496b771b665d66ed7c2def1622218f2f58b5",
-    "scripts/production.sh": "2f0f621512d842e9ae720d979d351f78c1c60bb0a82e2bfbaf5746b4938c5714",
+    "scripts/prepare-production.py": "b5af978ec2b3b5a9e488b5bb8003c231496200de25596aaebaafa599c2ecadc1",
+    "scripts/production-health.py": "5532a0148d49ec54dc403e65d868b9ae3534a09a9b327fe866b259e9ebb0f514",
+    "scripts/production.sh": "a55988ac9b6a18f06c401aafd4fbe174621bd548211aa7c53391078bb0904bed",
     "scripts/reconcile-production.cjs": "d3de010f8e9e1646515bcc7b98fd8edef260151dd8dd80ce9242fdae3e89bdf9",
     "scripts/seed-scale.cjs": "f6fe817588600f27c92b302af07443d8efa6f893c056cfea2a96b8279470005f",
     "scripts/start-local-mongo.sh": "6125ef21d4cfba20ddf6ce5ef85dc48f32493a8006355828fb7e63ab2be07643",
     "scripts/start-test-mongo.sh": "78458f9615b2091d233d190bd72f3a7b772cd6ce00b301dbac966e2ba36b15ab",
     "scripts/verify-failover.cjs": "98ef16bc2fb255bf55950e11638a936bbd0d8451feff22e69e943d93d90c51d5",
     "scripts/verify-full.py": "7c123d707c90a204bade942bdfbc06928129904919fb568f8e229132f9a1abe8",
-    "scripts/verify-laptop.cjs": "453cbe6781ed613325a642ba4ab316cb1a7aedb2d1cdbe698115e20fd95d9a18",
     "scripts/verify-local.cjs": "66e9c590f86ed1580a7cb8a926f09561bef65dedc1d553e4c01dec5a7341242c",
     "scripts/verify-production-app.cjs": "61f2ae42103a9e009de1d3f3761351b69f944a9ab12bf265ce1575e52f071638",
     "scripts/verify-production-ops.cjs": "005e4db575455c4d90beef2da77b61e85fb2c962546d427a04a0145a5eb6bac1",

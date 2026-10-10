@@ -2,16 +2,16 @@
 > frontend@0.0.0 test:e2e
 > playwright test
 
-[WebServer] (node:723173) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:1091948) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
 
 Running 4 tests using 1 worker
 
-(node:723207) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:1092015) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓  1 e2e/commerce.spec.ts:16:1 › admin creates stock; member requests, receives, reports; server-derived dashboard agrees (5.1s)
-  ✓  2 e2e/commerce.spec.ts:95:1 › admin manages member targets, cash reference and internal work (2.1s)
-  ✓  3 e2e/commerce.spec.ts:146:1 › approved correction preserves history and recalculates member stock and revenue (2.6s)
-  ✓  4 e2e/commerce.spec.ts:182:1 › finance tags filter without double counting; void and task archive are effective (1.8s)
+  ✓  1 e2e/commerce.spec.ts:16:1 › admin creates stock; member requests, receives, reports; server-derived dashboard agrees (5.4s)
+  ✓  2 e2e/commerce.spec.ts:95:1 › admin manages member targets, cash reference and internal work (2.2s)
+  ✓  3 e2e/commerce.spec.ts:146:1 › approved correction preserves history and recalculates member stock and revenue (2.7s)
+  ✓  4 e2e/commerce.spec.ts:182:1 › finance tags filter without double counting; void and task archive are effective (1.9s)
 
-  4 passed (12.7s)
+  4 passed (13.3s)
