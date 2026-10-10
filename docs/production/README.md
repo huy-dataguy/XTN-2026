@@ -1,7 +1,11 @@
 # Production tối thiểu trên một VPS
 
-Nếu dùng chính laptop làm máy production, bản chạy thật và lịch backup đã được
-cài theo [hướng dẫn laptop](laptop.md), địa chỉ **http://localhost:8080**.
+**Runtime và dữ liệu trên laptop đã được xóa theo yêu cầu.** Evidence bên dưới
+thuộc các lần kiểm chứng trước, không phải trạng thái dịch vụ đang chạy.
+[Bàn giao](../PROJECT_STATUS.md) · [Chuyển sang MongoDB Cloud](mongodb-cloud.md).
+
+Nếu dựng lại laptop, làm theo [hướng dẫn laptop](laptop.md), địa chỉ
+**http://localhost:8080** sau khi khởi động thủ công.
 
 Bản này phù hợp hệ thống nội bộ cấp hàng, bán hàng và báo cáo của nhóm: một VPS,
 MongoDB local có xác thực và replica set một node, API Express và giao diện qua

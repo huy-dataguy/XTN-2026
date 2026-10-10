@@ -1,5 +1,9 @@
 # Sử dụng thật trên laptop hiện tại
 
+**Đã dọn toàn bộ runtime/dữ liệu XTN theo yêu cầu.** Nội dung bên dưới mô tả bản
+đã chạy và cách dựng lại; localhost/credentials/timers hiện không còn.
+Đọc [trạng thái bàn giao](../PROJECT_STATUS.md) trước khi vận hành.
+
 Ứng dụng chạy tại **http://localhost:8080** (hoặc http://127.0.0.1:8080).
 Đây là stack `xtn-prod`, dùng Mongo local có xác thực và volume riêng
 `xtn-prod_mongo-data`. API/Mongo không mở cổng host. Web chỉ bind loopback,

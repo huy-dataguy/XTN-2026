@@ -1,5 +1,9 @@
 # Chạy toàn dự án với MongoDB local
 
+**Trạng thái 2026-10-10:** runtime, dữ liệu, backup và credentials local đã xóa.
+Các địa chỉ dưới đây chỉ hoạt động sau khi dựng lại. Đọc
+[bàn giao hiện tại](../PROJECT_STATUS.md) trước khi chạy.
+
 MongoDB phát triển: **127.0.0.1:27017**, replica set `xtn-local`, database `xtn_local`.
 Volume Docker `xtn-local_mongo-data` giữ dữ liệu khi restart/stop container. Không dùng
 Mongo cloud trong cấu hình hiện tại. Đây là replica một node để hỗ trợ transaction;
@@ -15,7 +19,7 @@ npm ci
 npm start
 ```
 
-Migration index từ repository root (đã áp dụng trên local hiện tại):
+Migration index từ repository root (chạy lại trên database mới):
 
 ```bash
 node scripts/migrate-indexes.cjs          # kiểm tra, không thay đổi
@@ -31,10 +35,9 @@ npm run dev -- --host 127.0.0.1
 ```
 
 Frontend http://127.0.0.1:5173, API http://127.0.0.1:5000/api/v1,
-readiness http://127.0.0.1:5000/health/ready. Tài khoản quản trị local đã được cấp
-trong lần kiểm chứng này; thông tin nằm ở `.local/admin-credentials.json` (quyền 600,
-không đưa vào Git). `.env` cũng không đưa vào Git. Database local chưa có dữ liệu
-nghiệp vụ cũ; không giả định đây là dữ liệu đã chuyển đổi từ hệ thống trước.
+readiness http://127.0.0.1:5000/health/ready. Cần bootstrap tài khoản quản trị mới
+cho database trống; credentials cũ đã xóa. `.env` và credentials không đưa vào Git.
+Không giả định database mới chứa dữ liệu đã chuyển đổi từ hệ thống trước.
 
 ## Full check trên hạ tầng thật
 

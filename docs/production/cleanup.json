@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "removedContainers": 22,
+  "removedVolumes": 26,
+  "removedNetworks": 5,
+  "removedApplicationImageTags": 8,
+  "projectScheduledJobsRemoved": true,
+  "globalDockerAndUserSettingsUnchanged": true,
+  "databaseDataDeleted": true,
+  "privateCredentialsAndBackups": "deleted",
+  "scope": "Only Docker resources identified by XTN compose/refactor labels and XTN image repository names.",
+  "removedGeneratedPaths": [
+    ".local",
+    "backend/node_modules",
+    "frontend/node_modules",
+    "frontend/dist",
+    "frontend/test-results",
+    "scripts/__pycache__",
+    "backend/.env"
+  ],
+  "completedDate": "2026-10-10",
+  "verification": {
+    "remainingContainers": 0,
+    "remainingXtnUnitFiles": 0,
+    "projectListeningPorts": [],
+    "privateDirectoryExists": false
+  }
+}
