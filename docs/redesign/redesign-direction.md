@@ -1,6 +1,6 @@
 # Định hướng redesign và các quyết định cần chốt
 
-Trạng thái: đề xuất từ audit, chưa phải business contract đã được chủ dự án xác nhận.
+Trạng thái: đề xuất từ audit. Cập nhật nghiệp vụ ngày 2026-10-09: nhiều lần đặt/nhận và nhiều báo cáo mỗi tuần, có gia hạn nộp; xem `acid-weekly-accounting-review.md` để biết contract phân kỳ và hàng hư/tặng. Các policy giá vốn/KPI còn cần chốt.
 Giả định làm việc: bán hàng/cấp hàng qua cộng tác viên, tiền tệ VND,
 timezone nghiệp vụ Asia/Ho_Chi_Minh. Nếu chọn bán trực tiếp hoặc kết hợp,
 bổ sung customer/cart/payment/returns; không đổi nghĩa allocation cũ thành
@@ -124,7 +124,7 @@ MongoDB có thể tiếp tục nếu topology hỗ trợ multi-document transact
 đã có chiến lược indexes/constraints/backup. PostgreSQL là phương án cân nhắc
 cho ledger/đối soát nhiều quan hệ, không là quyết định đã chốt. Nếu giữ Mongo,
 kiểm chứng rollback, concurrent reservation và retries trên replica set thật.
-Schema/index changes phải đi qua migration được review và gate riêng.
+Schema/index changes dùng migration rõ ràng. Người dùng đã xác nhận bỏ gate của skill cũ; index local đã được áp dụng, xem runbook.
 
 ## Thứ tự thực hiện và tiêu chí hoàn thành
 
@@ -167,7 +167,7 @@ backup/restore runbook và deployment config theo environment.
    hưởng scope customer checkout/payment/refund.
 2. Đơn là mua đứt, cấp hàng ký gửi hay yêu cầu điều chuyển? Khi nào reserve,
    dispatch, receive; có giao một phần và hạn giữ hàng không?
-3. Cho phép nhiều báo cáo cùng tuần? Cộng tác viên bán theo giá nào; có chiết
+3. Đã xác nhận cho phép nhiều báo cáo cùng tuần. Cộng tác viên bán theo giá nào; có chiết
    khấu/hoa hồng, hàng hư/hoàn được ai chấp nhận; tuần được khóa khi nào?
 4. Vai trò kho/tài chính/duyệt có tách? Quyền impersonate và chỉnh lịch sử?
 5. Hệ thống đang có dữ liệu thật/bao nhiêu người dùng; host/DB topology,

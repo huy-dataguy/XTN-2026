@@ -1,0 +1,68 @@
+{
+  "status": "passed",
+  "recordedAtUTC": "2026-10-10T04:29:06.192648+00:00",
+  "database": "xtn_refactor_test_scale_final1000",
+  "commands": [
+    {
+      "command": "TEST_MONGO_URI=<fresh final1000 URI> SCALE_MEMBERS=1000 node scripts/seed-scale.cjs",
+      "exitCode": 0,
+      "log": "seed-final-1000.txt"
+    },
+    {
+      "command": "TEST_MONGO_URI=<fresh final1000 URI> node scripts/exercise-scale.cjs",
+      "exitCode": 0,
+      "log": "traffic-final-run.txt"
+    },
+    {
+      "command": "python3 scripts/verify-full.py",
+      "exitCode": 0,
+      "proof": "../full-check/verification.json"
+    }
+  ],
+  "sourceSha256": {
+    "backend/src/application/analytics.js": "b3340762738a9139375032a757acae76ea8c850964221b65c534baaff7432734",
+    "backend/src/application/inventory-shared.js": "ada828ec69e21de12edcf9ce85de5e71dbc45c9617293b21a67b168275de8938",
+    "backend/src/application/inventory.js": "3060ef35fe8a20dae51eeb07d5b71dea0388e234f7dee008421fa464a9b83731",
+    "backend/src/application/orders.js": "0ea54079fd4a8859bf4ded9c0a0fef9d12b0f6d2866dd38531303ef97d26294a",
+    "backend/src/application/periods.js": "911a9251e44e22a527702b0d72fbac9f126eb6d1cb3284748325e143c94b7c7b",
+    "backend/src/application/reports.js": "8bed1f7d08e947b40a2cd2eb39cf30462bbcac8c6a1b17d46dc4e0ef37cde1f3",
+    "backend/src/domain/policy.js": "6ff30c5f32d355e58119c00e9706b6bb6c9bf5d7083c42546b15b24461d10ab5",
+    "backend/src/http/app.js": "18927504ef4e8dfc575ac1fde3acae426b16366e7d392a354f864b2130f857ea",
+    "backend/src/http/auth.js": "b03d9edc8034d895803bc37b61c4959798b48ce7906cd3a7fc52a175c516ce5d",
+    "backend/src/http/commerce-routes.js": "e968450e7361e0981622d84e4d44ae818a4cd02df6c99250d5835320ab882fd8",
+    "backend/src/http/period-routes.js": "72f5559e36f124f54c7b6c7553bcc6f784b98c5a65eabda2f38dcd0eda3f7301",
+    "backend/src/http/router-kit.js": "723e0a5ed770ca61795470c3a4a4177297dc1a4320a3b5f6f329ad8b56c239cf",
+    "backend/src/http/routes.js": "124519d9ae1e3c82bacd1ea7b7dc2a2f9c37990c545406c7d5ed7d10ed27fe80",
+    "backend/src/http/schemas.js": "42d0fe0dc371a4783edca0a6b25eb8397d43020ba3984bbe8bc568a062f3f90b",
+    "backend/src/http/staff-routes.js": "5c82fab7cffa4e6f86a4ef671fc08e7c6eeb97140eae4f3711a0156999d35f21",
+    "backend/src/infrastructure/config.js": "37141f604127d622cbc38a52f634786345d06813c47dc0d897fed125d6da2347",
+    "backend/src/infrastructure/models.js": "0fae93814276b502aace0c78fa0a5ae4ef7957a143e6575a6844fcadf3b4c735",
+    "backend/src/infrastructure/transaction.js": "2809ee982e73e8fe1aa5367ee5090a4ae510ad96879e05fc283405bd30af7426",
+    "backend/test/domain.test.js": "5dde229f9dee2a80ac0fe9d3268ee5fde19744f5a592636c50b9b2ada8b62e2b",
+    "backend/test/integration.test.js": "c8f75d8e778686aa66c6bb65fab5440a69e32e8fedc386590538133e5b391402",
+    "frontend/e2e/commerce.spec.ts": "4112a13e6f0168b54fabe8fd6ecc9df9dc8517c879ad7b1560fc80968f3c1265",
+    "frontend/src/App.tsx": "98e2e1e210e57503496fb1a79a2de47964d78cea99e9af71ce8354e753415e67",
+    "frontend/src/assets/avatar.png": "fa08a10e178a6dd1f98f7cd4fd841495d752f6e49954245bd7e02bdd408e3784",
+    "frontend/src/assets/react.svg": "35ef61ed53b323ae94a16a8ec659b3d0af3880698791133f23b084085ab1c2e5",
+    "frontend/src/assets/vvnspkt.webp": "fcd99e98fc368a93dfbdc44d147a6e87fe6e802c7ae2b3a75422d9d9044eddd7",
+    "frontend/src/features/auth.tsx": "76971d999b9c595a6e9348022e468afe900574dfbe70a0c8a5c16c663a0bfa2f",
+    "frontend/src/features/dashboard.tsx": "cecb693b7ef7ecc967595eae117561760cde2abd2419cca81bb13b06d98508d8",
+    "frontend/src/features/inventory.tsx": "160635b9bf42b7319cc87ad4b251fb8bb1014cd16d8116fc40ecbf5183809d92",
+    "frontend/src/features/members.tsx": "2184a97b13daeecac632ed467387b96f56b2dbb7c0fd8d1e150a275f447be585",
+    "frontend/src/features/operations.tsx": "45a8df33c4dff22b350c7765664c4ad7e8e319e2d04dc987259afbbf77cec1f6",
+    "frontend/src/features/orders.tsx": "b7c7e6291c67ccfc6b7b50b39535cb1df9a09965efefb5707a368c64a71c90b3",
+    "frontend/src/features/reports.tsx": "63d313bccc68b7b142fa6e33979e64c4911f7ee13d88d51d95e1038d10be32e4",
+    "frontend/src/index.css": "90d9c9733aac65f40d2b54872dd40842bfb9f47494e5825c86b83afc0c9812f5",
+    "frontend/src/main.tsx": "36d495d6219c804035f009693df7052ad4400a9ce974bf1b5424b185a8c146d0",
+    "frontend/src/shared/api.ts": "dbab9bca9e4f41783fa92bde24748f3c3f368155dc288d5e407a5d084710d5d6",
+    "frontend/src/shared/types.ts": "8bf55f98addc28343597e70fbe58bdadbcbfccf547c901648c56d1bf598cbd34",
+    "frontend/src/shared/ui.tsx": "75a492398b2b29f6fcbcbd5faa0f48eee9b858273c346004bb7a308ed1059e65",
+    "frontend/src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5"
+  },
+  "scriptSha256": {
+    "scripts/seed-scale.cjs": "50df64a01dad14cd31468e698d032a40b4336c5ab8103b08c08a5c6a32f4d863",
+    "scripts/exercise-scale.cjs": "e54a43e3e1242ee1986a46d7d9b9e6438da39baca3ecc60d6f38485b4f05dc1b",
+    "scripts/measure-scale.cjs": "65233b49f467965c73e2d96b6161c77f3bd7dc66f1d23b6d56a456af26db9607"
+  },
+  "limits": "Synthetic large history; actual HTTP workflows. No index migration, no production capacity claim."
+}

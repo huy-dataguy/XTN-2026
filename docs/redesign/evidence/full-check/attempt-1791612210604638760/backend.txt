@@ -1,0 +1,33 @@
+
+> test
+> node --test test/*.test.js
+
+✔ Vietnam Monday boundary, full calendar keys and bounded ranges (3.634849ms)
+✔ historical timeline rejects a sale before receipt even if final balance positive (0.508373ms)
+✔ damage then gift consumes physical quantity and expense once (0.332661ms)
+✔ missing cost stays unknown; safe integer overflow rejected (0.365532ms)
+✔ fail-closed signup, admin-only internal resources, no hash leak, legacy API closed (224.761715ms)
+✔ multi-line failure rolls back reservation and order; negative/empty input rejected (73.937312ms)
+✔ concurrent requests for stock=1 allow one; same key replays and payload conflict rejected (126.666182ms)
+✔ partial receipts, ownership, cancellation and amendment release only remaining reservation (154.518917ms)
+✔ two-week ledger: multiple receipts/reports, late submission, damage→gift, snapshots, weighted KPI, correction (791.236145ms)
+✔ legacy uninitialized inventory refused, unknown cost null, revoked user token rejected (195.390738ms)
+✔ concurrent sales in different periods cannot oversell the same lot (251.869815ms)
+✔ member completion, weighted multi-week KPI, close guard, closed writes and reopen (166.476601ms)
+✔ warehouse damage/gift, financial references, cash totals and immutable void (96.112539ms)
+✔ forged totals rejected; money overflow rolls back; order amendment changes reservation delta (106.872391ms)
+✔ expired reporting requires extension; pending amendments and password reset revoke previous sessions (456.606097ms)
+✔ partial product patch preserves costing and tag filters are non-additive (121.407258ms)
+✔ backdated receipt and later period close serialize; receipts cannot precede membership (138.477389ms)
+✔ nonzero multi-week KPI is weighted, group snapshots survive change, completion is explicit (406.21566ms)
+✔ tasks lifecycle, internal authorization, pagination, logout and audit secrecy (154.586671ms)
+✔ independent reconciliation: physical warehouse, reservations, lot balances and approved revenue agree with stored ledger (128.055599ms)
+✔ weekly detail pagination never changes organization totals; inventory carries across range boundaries (161.125082ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4255.778082

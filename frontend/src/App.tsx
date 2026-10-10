@@ -1,272 +1,184 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { User, UserRole, Order, Product, WeeklyReport, WeeklyReport as WeeklyReportType } from './types';
-
-// --- SERVICES ---
-import { productService } from './services/productService';
-import { orderService } from './services/orderService';
-import { reportService } from './services/reportService';
-import { userService } from './services/userService'; 
-
-// --- COMPONENTS & PAGES ---
-import { Sidebar } from './components/Sidebar';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-
-// Admin Pages
-import { AdminDashboard } from './pages/admin/AdminDashboard';
-import { ProductManager } from './pages/admin/ProductManager';
-import { OrderManager } from './pages/admin/OrderManager';
-import { ReportManager } from './pages/admin/ReportManager';
-import { UserManager } from './pages/admin/UserManager';
-import { ReceivedOrderManager } from './pages/admin/ReceivedOrderManager';
-import KanbanPage from './pages/admin/KanbanPage';
-
-// 👇 [MỚI] Import trang Sao kê (Lưu ý đường dẫn file bạn tạo)
-import StatementPage from './pages/admin/StatementPage'; 
-
-// Distributor Pages
-import { DistributorDashboard } from './pages/distributor/DistributorDashboard';
-import { OrderPage } from './pages/distributor/OrderPage';
-import { ReportPage } from './pages/distributor/ReportPage';
-import { HistoryPage } from './pages/distributor/HistoryPage';
-
-import { LogOut, Loader2 } from 'lucide-react';
-
-// --- MAIN LAYOUT (PROTECTED) ---
-const MainLayout = ({ user, logout }: { user: User, logout: () => void }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [reports, setReports] = useState<WeeklyReport[]>([]);
-  const [distributors, setDistributors] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // State chỉnh sửa cho distributor
-  const [editingReportId, setEditingReportId] = useState<string | null>(null);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const requests = [
-        productService.getAll(),
-        orderService.getAll(),
-        reportService.getAll(),
-        user.role === UserRole.ADMIN ? userService.getDistributors() : Promise.resolve({ data: [] } as any)
-      ];
-
-      const [productsRes, ordersRes, reportsRes, usersRes] = await Promise.all(requests);
-      setProducts(productsRes.data);
-      setOrders(ordersRes.data);
-      setReports(reportsRes.data);
-      setDistributors(usersRes.data);
-    } catch (error: any) {
-      console.error("Failed to fetch data", error);
-      if (error.response?.status === 401) {
-        logout();
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // --- Handlers ---
-  const handleAddUser = async (newUser: Omit<User, 'id'>) => {
-    setIsLoading(true);
-    try {
-      await userService.create(newUser);
-      await fetchData();
-      alert("Thêm nhân viên thành công!");
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Lỗi khi thêm nhân viên.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa nhân viên này?")) return;
-    setIsLoading(true);
-    try {
-      await userService.delete(userId);
-      await fetchData();
-    } catch (error) {
-      alert("Lỗi khi xóa nhân viên.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const navigate = useNavigate();
-  const handleDistributorEditReport = (report: WeeklyReportType) => {
-    setEditingReportId(report.id);
-    navigate('/report');
-  };
-
-  const handleDistributorReportSubmit = () => {
-    setEditingReportId(null);
-    alert('Report submitted successfully');
-    fetchData(); 
-    navigate('/history');
-  };
-
-  const handleOrderSuccess = () => {
-    fetchData(); 
-    navigate('/history');
-  };
-
-  if (isLoading && products.length === 0) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
-        <span className="ml-3 text-lg font-medium text-slate-600">Loading system data...</span>
+import {
+  Component,
+  lazy,
+  Suspense,
+  useEffect,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
+import {
+  BrowserRouter,
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, session } from "./shared/api";
+import type { User } from "./shared/types";
+import { ErrorNotice } from "./shared/ui";
+import Login from "./features/auth";
+const Dashboard = lazy(() => import("./features/dashboard"));
+const Orders = lazy(() => import("./features/orders"));
+const Reports = lazy(() => import("./features/reports"));
+const Inventory = lazy(() => import("./features/inventory"));
+const Members = lazy(() => import("./features/members"));
+const Finance = lazy(() =>
+  import("./features/operations").then((m) => ({ default: m.Finance })),
+);
+const Tasks = lazy(() =>
+  import("./features/operations").then((m) => ({ default: m.Tasks })),
+);
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: boolean }
+> {
+  state = { error: false };
+  static getDerivedStateFromError() {
+    return { error: true };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(error, info.componentStack);
+  }
+  render() {
+    return this.state.error ? (
+      <div className="notice error">
+        Không thể hiển thị trang.{" "}
+        <button onClick={() => location.reload()}>Tải lại</button>
       </div>
+    ) : (
+      this.props.children
     );
   }
-
+}
+function Application() {
+  const client = useQueryClient();
+  const query = useQuery({
+    queryKey: ["session"],
+    queryFn: () => api<User>("/auth/me"),
+    enabled: !!session.get(),
+    retry: false,
+    staleTime: 300000,
+  });
+  useEffect(() => {
+    const expire = () => {
+      session.clear();
+      client.clear();
+      void client.invalidateQueries({ queryKey: ["session"] });
+    };
+    window.addEventListener("xtn:session-expired", expire);
+    return () => window.removeEventListener("xtn:session-expired", expire);
+  }, [client]);
+  const logout = async () => {
+    try {
+      await api("/auth/logout", "POST", {});
+    } finally {
+      session.clear();
+      client.clear();
+      location.assign("/login");
+    }
+  };
+  if (!session.get())
+    return (
+      <Login
+        onLogin={() => {
+          void client.invalidateQueries({ queryKey: ["session"] });
+          location.assign("/");
+        }}
+      />
+    );
+  if (query.isPending)
+    return (
+      <p className="boot" role="status">
+        Đang xác thực phiên…
+      </p>
+    );
+  if (query.error)
+    return (
+      <div className="boot">
+        <ErrorNotice error={query.error} retry={() => void query.refetch()} />
+        <button
+          onClick={() => {
+            session.clear();
+            location.reload();
+          }}
+        >
+          Đăng nhập lại
+        </button>
+      </div>
+    );
+  const user = query.data;
+  if (!user) return null;
+  const links = [
+    ["/", "Tổng quan"],
+    ["/orders", "Cấp hàng"],
+    ["/reports", "Báo cáo"],
+    ["/inventory", user.role === "ADMIN" ? "Kho & sản phẩm" : "Hàng đang giữ"],
+    ...(user.role === "ADMIN"
+      ? [
+          ["/members", "Thành viên"],
+          ["/finance", "Thu / chi"],
+          ["/tasks", "Công việc"],
+        ]
+      : []),
+  ];
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900">
-      <Sidebar user={user} onLogout={logout} reports={reports} />
-
-      <main className="flex-1 overflow-y-auto h-screen flex flex-col">
-        {/* Mobile Header */}
-        <header className="bg-white border-b border-slate-200 p-4 md:hidden flex justify-between items-center sticky top-0 z-10">
-           <h1 className="font-bold text-blue-700">XTN2026</h1>
-           <button onClick={logout}><LogOut className="w-5 h-5" /></button>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          XTN <span>2026</span>
+        </div>
+        <p className="eyebrow">CÙNG NHAU TẠO KẾT QUẢ</p>
+        <nav>
+          {links.map(([path, label]) => (
+            <NavLink key={path} to={path} end={path === "/"}>
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="profile">
+          <strong>{user.name}</strong>
+          <small>
+            {user.role === "ADMIN" ? "Quản trị" : user.group || "Thành viên"}
+          </small>
+          <button onClick={() => void logout()}>Đăng xuất</button>
+        </div>
+      </aside>
+      <main>
+        <header className="topbar">
+          <span>
+            Không gian {user.role === "ADMIN" ? "điều hành" : "thành viên"}
+          </span>
+          <span>VND · Giờ Việt Nam</span>
         </header>
-
-        <div className="p-6 max-w-7xl mx-auto w-full">
-            <Routes>
-              {/* --- ADMIN ROUTES --- */}
-              {user.role === UserRole.ADMIN && (
-                <>
-                  <Route path="/" element={<AdminDashboard reports={reports} orders={orders} products={products} />} />
-                  <Route path="/users" element={
-                    <UserManager 
-                      users={distributors} 
-                      currentUser={user}
-                      onAddUser={handleAddUser}
-                      onDeleteUser={handleDeleteUser}
-                    />
-                  } />
-                  <Route path="/products" element={<ProductManager products={products} onRefresh={fetchData} />} />
-                  <Route path="/orders" element={
-                    <OrderManager 
-                      orders={orders} 
-                      distributors={distributors} 
-                      onRefresh={fetchData} 
-                      currentUser={user}
-                    />
-                  } />                  
-                  <Route path="/reports" element={<ReportManager reports={reports} distributors={distributors} orders={orders} onRefresh={fetchData} />} />
-                  
-                  <Route 
-                    path="/received-check" 
-                    element={
-                      <ReceivedOrderManager 
-                        orders={orders} 
-                        products={products}
-                        distributors={distributors} 
-                        onRefresh={fetchData} 
-                      />
-                    } 
-                  />
-
-                  {/* 👇 [MỚI] Route cho trang Sao kê tài khoản */}
-                  <Route path="/finance" element={<StatementPage />} />
-                  <Route path="/tasks" element={<KanbanPage />} />
-
-                </>
-              )}
-
-              {/* --- DISTRIBUTOR ROUTES --- */}
-              {user.role === UserRole.DISTRIBUTOR && (
-                <>
-                  <Route path="/" element={
-                    <DistributorDashboard 
-                      myOrders={orders} 
-                      myReports={reports} 
-                      onNavigate={(path: string) => navigate(path === 'dashboard' ? '/' : `/${path}`)} 
-                    />
-                  } />
-                  <Route path="/order" element={
-                    <OrderPage 
-                      user={user} 
-                      products={products} 
-                      onOrderSuccess={handleOrderSuccess} 
-                    />
-                  } />
-                  <Route path="/report" element={
-                    <ReportPage 
-                      user={user} 
-                      products={products} 
-                      myReports={reports} 
-                      myOrders={orders} 
-                      editReportId={editingReportId}
-                      onReportSubmit={handleDistributorReportSubmit}
-                    />
-                  } />
-                  <Route path="/history" element={
-                    <HistoryPage 
-                      myReports={reports} 
-                      myOrders={orders} 
-                      onEditReport={handleDistributorEditReport} 
-                    />
-                  } />
-                </>
-              )}
-
-              {/* Catch all */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+        <div className="workspace">
+          <ErrorBoundary>
+            <Suspense fallback={<p role="status">Đang tải trang…</p>}>
+              <Routes>
+                <Route path="/" element={<Dashboard user={user} />} />
+                <Route path="/orders" element={<Orders user={user} />} />
+                <Route path="/reports" element={<Reports user={user} />} />
+                <Route path="/inventory" element={<Inventory user={user} />} />
+                {user.role === "ADMIN" && (
+                  <>
+                    <Route path="/members" element={<Members />} />
+                    <Route path="/finance" element={<Finance />} />
+                    <Route path="/tasks" element={<Tasks />} />
+                  </>
+                )}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
     </div>
   );
-};
-
-// --- MAIN APP COMPONENT ---
-function App() {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user_info');
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Invalid user data");
-        localStorage.clear();
-      }
-    }
-  }, []);
-
-  const handleAuthSuccess = (data: { token: string, user: any }) => {
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user_info', JSON.stringify(data.user));
-    setUser(data.user);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user_info');
-    setUser(null);
-  };
-
+}
+export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={!user ? <Login onAuthSuccess={handleAuthSuccess} /> : <Navigate to="/" />} />
-        <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
-        <Route path="/*" element={user ? <MainLayout user={user} logout={handleLogout} /> : <Navigate to="/login" />} />
-      </Routes>
+      <Application />
     </BrowserRouter>
   );
 }
-
-export default App;

@@ -1,0 +1,26 @@
+[dotenv@17.2.3] injecting env (2) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+{"event":"started","port":5003}
+{"event":"analytics-profile","phase":"members","ms":18}
+{"event":"analytics-profile","phase":"states","ms":235}
+{"event":"analytics-profile","phase":"report-headers","ms":608}
+{"event":"analytics-profile","phase":"opening","ms":6}
+{"event":"analytics-profile","phase":"inventory-range","ms":33}
+{"event":"analytics-profile","phase":"financial-range","ms":861}
+{"event":"analytics-profile","phase":"member-totals","ms":107}
+{"event":"analytics-profile","phase":"warehouse-costs","ms":5}
+{"event":"analytics-profile","phase":"members","ms":10}
+{"event":"analytics-profile","phase":"states","ms":214}
+{"event":"analytics-profile","phase":"report-headers","ms":581}
+{"event":"analytics-profile","phase":"opening","ms":3}
+{"event":"analytics-profile","phase":"inventory-range","ms":32}
+{"event":"analytics-profile","phase":"financial-range","ms":892}
+{"event":"analytics-profile","phase":"member-totals","ms":115}
+{"event":"analytics-profile","phase":"warehouse-costs","ms":3}
+{"event":"analytics-profile","phase":"members","ms":6}
+{"event":"analytics-profile","phase":"states","ms":183}
+{"event":"analytics-profile","phase":"report-headers","ms":559}
+{"event":"analytics-profile","phase":"opening","ms":2}
+{"event":"analytics-profile","phase":"inventory-range","ms":36}
+{"event":"analytics-profile","phase":"financial-range","ms":765}
+{"event":"analytics-profile","phase":"member-totals","ms":110}
+{"event":"analytics-profile","phase":"warehouse-costs","ms":3}

@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "migrationId": "001-query-indexes",
+  "database": "xtn_refactor_test_browser_1791607328572654652",
+  "mode": "apply",
+  "changes": [
+    {
+      "collection": "inventorymovements",
+      "name": "member_effective_lot",
+      "key": {
+        "memberId": 1,
+        "effectiveAt": 1,
+        "lotId": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "inventorymovements",
+      "name": "effective_kind_period_source",
+      "key": {
+        "effectiveAt": 1,
+        "kind": 1,
+        "periodId": 1,
+        "sourceId": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "inventorymovements",
+      "name": "source_kind",
+      "key": {
+        "sourceId": 1,
+        "kind": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "reports",
+      "name": "member_period_status",
+      "key": {
+        "memberId": 1,
+        "periodId": 1,
+        "status": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "receipts",
+      "name": "member_effective",
+      "key": {
+        "memberId": 1,
+        "effectiveAt": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "memberperiods",
+      "name": "period_member",
+      "key": {
+        "periodId": 1,
+        "memberId": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "orders",
+      "name": "member_created",
+      "key": {
+        "memberId": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "users",
+      "name": "role_created",
+      "key": {
+        "role": 1,
+        "createdAt": 1,
+        "_id": 1
+      },
+      "status": "created"
+    }
+  ]
+}

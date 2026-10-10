@@ -1,0 +1,276 @@
+{
+  "database": "xtn_refactor_test_scale_final1000",
+  "members": 1000,
+  "from": "2026-04-06",
+  "to": "2026-09-28",
+  "counts": {
+    "User": 1001,
+    "Product": 200,
+    "Receipt": 26000,
+    "Report": 52100,
+    "Movement": 104400,
+    "MemberPeriod": 26000
+  },
+  "expected": {
+    "revenue": 779000000,
+    "sold": 77900,
+    "targetRevenue": 1554540000,
+    "missingTargets": 91,
+    "incompleteRows": 59,
+    "contribution": null,
+    "achievement": null
+  },
+  "sampleMembers": [
+    {
+      "id": "6ac9be1313b0a5bb90526cf8",
+      "name": "Member 0000",
+      "physical": 131
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526cf9",
+      "name": "Member 0001",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526cfa",
+      "name": "Member 0002",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526cfb",
+      "name": "Member 0003",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526cfc",
+      "name": "Member 0004",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526cfd",
+      "name": "Member 0005",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526cfe",
+      "name": "Member 0006",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526cff",
+      "name": "Member 0007",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d00",
+      "name": "Member 0008",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d01",
+      "name": "Member 0009",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d02",
+      "name": "Member 0010",
+      "physical": 131
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d03",
+      "name": "Member 0011",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d04",
+      "name": "Member 0012",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d05",
+      "name": "Member 0013",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d06",
+      "name": "Member 0014",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d07",
+      "name": "Member 0015",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d08",
+      "name": "Member 0016",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d09",
+      "name": "Member 0017",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d0a",
+      "name": "Member 0018",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d0b",
+      "name": "Member 0019",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d0c",
+      "name": "Member 0020",
+      "physical": 131
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d0d",
+      "name": "Member 0021",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d0e",
+      "name": "Member 0022",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d0f",
+      "name": "Member 0023",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d10",
+      "name": "Member 0024",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d11",
+      "name": "Member 0025",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d12",
+      "name": "Member 0026",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d13",
+      "name": "Member 0027",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d14",
+      "name": "Member 0028",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d15",
+      "name": "Member 0029",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d16",
+      "name": "Member 0030",
+      "physical": 131
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d17",
+      "name": "Member 0031",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d18",
+      "name": "Member 0032",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d19",
+      "name": "Member 0033",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d1a",
+      "name": "Member 0034",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d1b",
+      "name": "Member 0035",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d1c",
+      "name": "Member 0036",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d1d",
+      "name": "Member 0037",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d1e",
+      "name": "Member 0038",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d1f",
+      "name": "Member 0039",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d20",
+      "name": "Member 0040",
+      "physical": 131
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d21",
+      "name": "Member 0041",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d22",
+      "name": "Member 0042",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d23",
+      "name": "Member 0043",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d24",
+      "name": "Member 0044",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d25",
+      "name": "Member 0045",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d26",
+      "name": "Member 0046",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d27",
+      "name": "Member 0047",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d28",
+      "name": "Member 0048",
+      "physical": 130
+    },
+    {
+      "id": "6ac9be1313b0a5bb90526d29",
+      "name": "Member 0049",
+      "physical": 130
+    }
+  ],
+  "note": "Synthetic bulk historical fixtures; actual HTTP business commands are exercised separately. No cloud/dev DB and no new secondary indexes."
+}

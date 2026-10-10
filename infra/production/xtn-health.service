@@ -1,0 +1,9 @@
+[Unit]
+Description=XTN HTTPS readiness and backup freshness
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/XTN-2026
+Environment=XTN_DEPLOY_DIR=/opt/XTN-2026/.local/production
+ExecStart=/usr/bin/python3 scripts/production-health.py
+UMask=0077

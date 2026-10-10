@@ -1,0 +1,224 @@
+{
+  "status": "passed",
+  "database": "xtn_refactor_test_scale_indexed1000",
+  "queries": {
+    "adminReports": {
+      "nReturned": 51,
+      "totalDocsExamined": 51,
+      "totalKeysExamined": 51,
+      "executionTimeMillis": 3,
+      "winningPlan": {
+        "stage": "LIMIT",
+        "limitAmount": 51,
+        "inputStage": {
+          "stage": "FETCH",
+          "inputStage": {
+            "stage": "IXSCAN",
+            "keyPattern": {
+              "schemaVersion": 1,
+              "createdAt": -1,
+              "_id": -1
+            },
+            "indexName": "schema_created",
+            "isMultiKey": false,
+            "multiKeyPaths": {
+              "schemaVersion": [],
+              "createdAt": [],
+              "_id": []
+            },
+            "isUnique": false,
+            "isSparse": false,
+            "isPartial": false,
+            "indexVersion": 2,
+            "direction": "forward",
+            "indexBounds": {
+              "schemaVersion": [
+                "[1, 1]"
+              ],
+              "createdAt": [
+                "[MaxKey, MinKey]"
+              ],
+              "_id": [
+                "[MaxKey, MinKey]"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "memberReports": {
+      "nReturned": 51,
+      "totalDocsExamined": 51,
+      "totalKeysExamined": 51,
+      "executionTimeMillis": 0,
+      "winningPlan": {
+        "stage": "LIMIT",
+        "limitAmount": 51,
+        "inputStage": {
+          "stage": "FETCH",
+          "inputStage": {
+            "stage": "IXSCAN",
+            "keyPattern": {
+              "schemaVersion": 1,
+              "memberId": 1,
+              "createdAt": -1,
+              "_id": -1
+            },
+            "indexName": "schema_member_created",
+            "isMultiKey": false,
+            "multiKeyPaths": {
+              "schemaVersion": [],
+              "memberId": [],
+              "createdAt": [],
+              "_id": []
+            },
+            "isUnique": false,
+            "isSparse": false,
+            "isPartial": false,
+            "indexVersion": 2,
+            "direction": "forward",
+            "indexBounds": {
+              "schemaVersion": [
+                "[1, 1]"
+              ],
+              "memberId": [
+                "[ObjectId('6ac9c14e3dcfb71404f9e6b3'), ObjectId('6ac9c14e3dcfb71404f9e6b3')]"
+              ],
+              "createdAt": [
+                "[MaxKey, MinKey]"
+              ],
+              "_id": [
+                "[MaxKey, MinKey]"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "memberHistory": {
+      "nReturned": 88,
+      "totalDocsExamined": 88,
+      "totalKeysExamined": 88,
+      "executionTimeMillis": 0,
+      "winningPlan": {
+        "stage": "FETCH",
+        "inputStage": {
+          "stage": "IXSCAN",
+          "keyPattern": {
+            "memberId": 1,
+            "effectiveAt": 1,
+            "lotId": 1
+          },
+          "indexName": "member_effective_lot",
+          "isMultiKey": false,
+          "multiKeyPaths": {
+            "memberId": [],
+            "effectiveAt": [],
+            "lotId": []
+          },
+          "isUnique": false,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "memberId": [
+              "[ObjectId('6ac9c14e3dcfb71404f9e6b3'), ObjectId('6ac9c14e3dcfb71404f9e6b3')]"
+            ],
+            "effectiveAt": [
+              "[MinKey, MaxKey]"
+            ],
+            "lotId": [
+              "[MinKey, MaxKey]"
+            ]
+          }
+        }
+      }
+    },
+    "username": {
+      "nReturned": 1,
+      "totalDocsExamined": 1,
+      "totalKeysExamined": 1,
+      "executionTimeMillis": 0,
+      "winningPlan": {
+        "stage": "LIMIT",
+        "limitAmount": 1,
+        "inputStage": {
+          "stage": "PROJECTION_SIMPLE",
+          "transformBy": {
+            "password": 0
+          },
+          "inputStage": {
+            "stage": "FETCH",
+            "inputStage": {
+              "stage": "IXSCAN",
+              "keyPattern": {
+                "username": 1
+              },
+              "indexName": "username_lookup",
+              "isMultiKey": false,
+              "multiKeyPaths": {
+                "username": []
+              },
+              "isUnique": false,
+              "isSparse": false,
+              "isPartial": false,
+              "indexVersion": 2,
+              "direction": "forward",
+              "indexBounds": {
+                "username": [
+                  "[\"scale-0\", \"scale-0\"]"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "adminUsers": {
+      "nReturned": 51,
+      "totalDocsExamined": 51,
+      "totalKeysExamined": 51,
+      "executionTimeMillis": 0,
+      "winningPlan": {
+        "stage": "LIMIT",
+        "limitAmount": 51,
+        "inputStage": {
+          "stage": "PROJECTION_SIMPLE",
+          "transformBy": {
+            "password": 0
+          },
+          "inputStage": {
+            "stage": "FETCH",
+            "inputStage": {
+              "stage": "IXSCAN",
+              "keyPattern": {
+                "createdAt": -1,
+                "_id": -1
+              },
+              "indexName": "created_page",
+              "isMultiKey": false,
+              "multiKeyPaths": {
+                "createdAt": [],
+                "_id": []
+              },
+              "isUnique": false,
+              "isSparse": false,
+              "isPartial": false,
+              "indexVersion": 2,
+              "direction": "forward",
+              "indexBounds": {
+                "createdAt": [
+                  "[MaxKey, MinKey]"
+                ],
+                "_id": [
+                  "[MaxKey, MinKey]"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

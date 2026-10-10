@@ -1,0 +1,7 @@
+[dotenv@17.2.3] injecting env (2) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+{"event":"started","port":5003}
+
+> frontend@0.0.0 preview
+> vite preview --host 127.0.0.1 --port 5175
+
+  ➜  Local:   http://127.0.0.1:5175/

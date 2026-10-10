@@ -1,31 +1,15 @@
-# React + Vite
+# Frontend XTN
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript, TanStack Query, Vite. Node 24.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-
-## Backend API
-
-The default API is `https://be-vvnspkt-xtn.onrender.com/api`. To use the
-local backend through Vite's proxy (including ngrok), create `.env.local`
-in this directory with:
-
-```dotenv
-VITE_API_BASE_URL=/api
+```bash
+npm ci
+npm run dev
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-Start the backend on port 5000, then run `npm run dev` here. Restart Vite
-after changing environment variables. For production builds, set
-`VITE_API_BASE_URL` to your backend URL before running `npm run build`,
-or ensure your host routes `/api` to the backend when using a relative URL.
+Vite chuyển `/api` tới backend cổng 5000. `VITE_API_BASE_URL` mặc định `/api/v1`; chỉ cấu hình khi frontend và backend khác host. Không đặt secret trong biến VITE.
+
+Các trang trong `src/features`; request và kiểu dữ liệu dùng chung trong `src/shared`. Tất cả tổng doanh thu/giá vốn/KPI đến từ backend. Browser E2E chạy bản build bằng preview ở 5174 và API test 5001, tách dev 5173/5000. Browser E2E cần backend và fixture Mongo riêng; xem [runbook](../docs/redesign/refactor-runbook.md).

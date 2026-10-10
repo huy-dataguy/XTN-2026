@@ -1,0 +1,230 @@
+{
+  "status": "passed",
+  "migrationIds": [
+    "001-query-indexes",
+    "002-list-query-indexes"
+  ],
+  "database": "xtn_refactor_test_run1791613640505130401",
+  "mode": "apply",
+  "changes": [
+    {
+      "collection": "inventorymovements",
+      "name": "member_effective_lot",
+      "key": {
+        "memberId": 1,
+        "effectiveAt": 1,
+        "lotId": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "inventorymovements",
+      "name": "effective_kind_period_source",
+      "key": {
+        "effectiveAt": 1,
+        "kind": 1,
+        "periodId": 1,
+        "sourceId": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "inventorymovements",
+      "name": "source_kind",
+      "key": {
+        "sourceId": 1,
+        "kind": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "reports",
+      "name": "member_period_status",
+      "key": {
+        "memberId": 1,
+        "periodId": 1,
+        "status": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "receipts",
+      "name": "member_effective",
+      "key": {
+        "memberId": 1,
+        "effectiveAt": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "memberperiods",
+      "name": "period_member",
+      "key": {
+        "periodId": 1,
+        "memberId": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "orders",
+      "name": "member_created",
+      "key": {
+        "memberId": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "users",
+      "name": "role_created",
+      "key": {
+        "role": 1,
+        "createdAt": 1,
+        "_id": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "products",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "users",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "orders",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "reports",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "statement1",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "tasks",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "tags",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "orders",
+      "name": "schema_member_created",
+      "key": {
+        "schemaVersion": 1,
+        "memberId": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "orders",
+      "name": "schema_created",
+      "key": {
+        "schemaVersion": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "reports",
+      "name": "schema_member_created",
+      "key": {
+        "schemaVersion": 1,
+        "memberId": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "reports",
+      "name": "schema_created",
+      "key": {
+        "schemaVersion": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "users",
+      "name": "username_lookup",
+      "key": {
+        "username": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "reports",
+      "name": "period_status_schema",
+      "key": {
+        "periodId": 1,
+        "status": 1,
+        "schemaVersion": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "statement1",
+      "name": "reference_lookup",
+      "key": {
+        "reference": 1
+      },
+      "status": "created"
+    },
+    {
+      "collection": "statement1",
+      "name": "tags_created",
+      "key": {
+        "tags": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "status": "created"
+    }
+  ]
+}

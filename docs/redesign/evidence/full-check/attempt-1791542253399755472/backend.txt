@@ -1,0 +1,31 @@
+
+> test
+> node --test test/*.test.js
+
+✔ Vietnam Monday boundary, full calendar keys and bounded ranges (2.930164ms)
+✔ historical timeline rejects a sale before receipt even if final balance positive (0.574886ms)
+✔ damage then gift consumes physical quantity and expense once (0.411101ms)
+✔ missing cost stays unknown; safe integer overflow rejected (0.407958ms)
+✔ fail-closed signup, admin-only internal resources, no hash leak, legacy API closed (353.198494ms)
+✔ multi-line failure rolls back reservation and order; negative/empty input rejected (81.508102ms)
+✔ concurrent requests for stock=1 allow one; same key replays and payload conflict rejected (135.135406ms)
+✔ partial receipts, ownership, cancellation and amendment release only remaining reservation (166.078372ms)
+✔ two-week ledger: multiple receipts/reports, late submission, damage→gift, snapshots, weighted KPI, correction (781.793527ms)
+✔ legacy uninitialized inventory refused, unknown cost null, revoked user token rejected (222.684239ms)
+✔ concurrent sales in different periods cannot oversell the same lot (302.281688ms)
+✔ member completion, weighted multi-week KPI, close guard, closed writes and reopen (175.434666ms)
+✔ warehouse damage/gift, financial references, cash totals and immutable void (94.84187ms)
+✔ forged totals rejected; money overflow rolls back; order amendment changes reservation delta (122.92298ms)
+✔ expired reporting requires extension; pending amendments and password reset revoke previous sessions (475.916613ms)
+✔ partial product patch preserves costing and tag filters are non-additive (107.641262ms)
+✔ backdated receipt and later period close serialize; receipts cannot precede membership (153.439758ms)
+✔ nonzero multi-week KPI is weighted, group snapshots survive change, completion is explicit (383.64053ms)
+✔ tasks lifecycle, internal authorization, pagination, logout and audit secrecy (166.849236ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4186.420691

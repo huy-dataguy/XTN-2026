@@ -1,0 +1,3 @@
+[dotenv@17.2.3] injecting env (2) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+{"event":"started","port":5003}
+{"requestId":"b433a8b7-774d-40ef-aa81-3f19eec3205b","error":"Operation interrupted because client was closed"}

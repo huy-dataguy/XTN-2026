@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "products": 1,
+  "orders": 20,
+  "receipts": 40,
+  "approvedReports": 40,
+  "warehousePhysical": 77,
+  "memberPhysical": 41,
+  "revenue": 390000,
+  "contribution": -102000
+}

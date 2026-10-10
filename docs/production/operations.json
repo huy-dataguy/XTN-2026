@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "apiNonRoot": true,
+  "apiReadOnly": true,
+  "apiAndMongoPortsPrivate": true,
+  "unauthenticatedMongoRead": "blocked",
+  "applicationMongoAdminAccess": "blocked",
+  "forwardedIpSpoof": "ignored",
+  "restart": {
+    "milliseconds": 1661,
+    "unavailableProbes": 1,
+    "recovered": true
+  },
+  "release": {
+    "tag": "verify-1791613129403",
+    "image": "xtn-api:verify-1791613129403"
+  },
+  "rollback": {
+    "tag": "local",
+    "image": "xtn-api:local"
+  },
+  "scope": "Single-host production-style containers; real restart and rollback mechanics. No HA or public-domain certificate claim."
+}

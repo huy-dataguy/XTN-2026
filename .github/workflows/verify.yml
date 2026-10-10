@@ -1,0 +1,44 @@
+name: Verify commerce refactor
+on:
+  push:
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci --prefix backend && npm ci --prefix frontend
+      - name: Isolated replica set
+        run: |
+          docker run -d --name xtn-test --ulimit nofile=64000:64000 -p 127.0.0.1:27028:27017 mongo:7.0 --replSet xtn-test --bind_ip_all
+          for attempt in $(seq 1 60); do docker exec xtn-test mongosh --quiet --eval 'db.adminCommand({ping:1})' && break; sleep 1; done
+          docker exec xtn-test mongosh --quiet --eval 'rs.initiate({_id:"xtn-test",members:[{_id:0,host:"localhost:27017"}]})'
+          for attempt in $(seq 1 60); do docker exec xtn-test mongosh --quiet --eval 'if(!db.hello().isWritablePrimary)quit(1)' && break; sleep 1; done
+          docker exec xtn-test mongosh --quiet --eval 'if(!db.hello().isWritablePrimary)quit(1)'
+      - run: npm test --prefix backend
+        env:
+          TEST_MONGO_URI: mongodb://127.0.0.1:27028/xtn_refactor_test_ci?directConnection=true
+      - run: npm run lint --prefix frontend && npm run build --prefix frontend
+      - name: Start isolated browser API
+        run: |
+          TEST_MONGO_URI='mongodb://127.0.0.1:27028/xtn_refactor_test_browser_ci?directConnection=true' node backend/scripts/seed-browser-fixture.js
+          MONGO_URI='mongodb://127.0.0.1:27028/xtn_refactor_test_browser_ci?directConnection=true' JWT_SECRET='ci-fixture-secret-more-than-32-characters' NODE_ENV=test PORT=5001 node backend/server.js > /tmp/xtn-api.log 2>&1 &
+          for attempt in $(seq 1 60); do curl --fail http://127.0.0.1:5001/health/ready && break; sleep 1; done
+          curl --fail http://127.0.0.1:5001/health/ready
+      - run: cd frontend && npx playwright install --with-deps chromium && npm run test:e2e
+      - name: Real production containers, HTTPS, backup, restore and rollback
+        run: python3 scripts/verify-production.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-verification
+          path: |
+            frontend/test-results
+            docs/production

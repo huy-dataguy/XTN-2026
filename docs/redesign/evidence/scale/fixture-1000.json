@@ -1,0 +1,276 @@
+{
+  "database": "xtn_refactor_test_scale_indexed_final1000",
+  "members": 1000,
+  "from": "2026-04-06",
+  "to": "2026-09-28",
+  "counts": {
+    "User": 1001,
+    "Product": 200,
+    "Receipt": 26000,
+    "Report": 52100,
+    "Movement": 104400,
+    "MemberPeriod": 26000
+  },
+  "expected": {
+    "revenue": 779000000,
+    "sold": 77900,
+    "targetRevenue": 1554540000,
+    "missingTargets": 91,
+    "incompleteRows": 59,
+    "contribution": null,
+    "achievement": null
+  },
+  "sampleMembers": [
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9f4",
+      "name": "Member 0000",
+      "physical": 131
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9f5",
+      "name": "Member 0001",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9f6",
+      "name": "Member 0002",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9f7",
+      "name": "Member 0003",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9f8",
+      "name": "Member 0004",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9f9",
+      "name": "Member 0005",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9fa",
+      "name": "Member 0006",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9fb",
+      "name": "Member 0007",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9fc",
+      "name": "Member 0008",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9fd",
+      "name": "Member 0009",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9fe",
+      "name": "Member 0010",
+      "physical": 131
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cd9ff",
+      "name": "Member 0011",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda00",
+      "name": "Member 0012",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda01",
+      "name": "Member 0013",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda02",
+      "name": "Member 0014",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda03",
+      "name": "Member 0015",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda04",
+      "name": "Member 0016",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda05",
+      "name": "Member 0017",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda06",
+      "name": "Member 0018",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda07",
+      "name": "Member 0019",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda08",
+      "name": "Member 0020",
+      "physical": 131
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda09",
+      "name": "Member 0021",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda0a",
+      "name": "Member 0022",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda0b",
+      "name": "Member 0023",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda0c",
+      "name": "Member 0024",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda0d",
+      "name": "Member 0025",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda0e",
+      "name": "Member 0026",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda0f",
+      "name": "Member 0027",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda10",
+      "name": "Member 0028",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda11",
+      "name": "Member 0029",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda12",
+      "name": "Member 0030",
+      "physical": 131
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda13",
+      "name": "Member 0031",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda14",
+      "name": "Member 0032",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda15",
+      "name": "Member 0033",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda16",
+      "name": "Member 0034",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda17",
+      "name": "Member 0035",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda18",
+      "name": "Member 0036",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda19",
+      "name": "Member 0037",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda1a",
+      "name": "Member 0038",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda1b",
+      "name": "Member 0039",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda1c",
+      "name": "Member 0040",
+      "physical": 131
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda1d",
+      "name": "Member 0041",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda1e",
+      "name": "Member 0042",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda1f",
+      "name": "Member 0043",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda20",
+      "name": "Member 0044",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda21",
+      "name": "Member 0045",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda22",
+      "name": "Member 0046",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda23",
+      "name": "Member 0047",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda24",
+      "name": "Member 0048",
+      "physical": 130
+    },
+    {
+      "id": "6ac9c343c1d0e4e53b6cda25",
+      "name": "Member 0049",
+      "physical": 130
+    }
+  ],
+  "note": "Synthetic bulk historical fixtures; actual HTTP business commands are exercised separately. No cloud/dev DB. Seeder does not create indexes; see separate migration evidence."
+}

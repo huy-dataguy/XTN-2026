@@ -1,0 +1,18 @@
+{
+  "scope": "isolated-three-node-replica-only",
+  "before": {
+    "primary": "xtn-refactor-test:27017",
+    "orders": 11,
+    "reports": 13,
+    "movements": 42,
+    "commands": 101
+  },
+  "after": {
+    "primary": "xtn-refactor-secondary-1:27017",
+    "orders": 11,
+    "reports": 13,
+    "movements": 42,
+    "commands": 101
+  },
+  "originalPrimaryRestored": true
+}

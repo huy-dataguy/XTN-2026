@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "frontend": "http://127.0.0.1:5173",
+  "api": "http://127.0.0.1:5000/api/v1",
+  "database": "mongodb://127.0.0.1:27017/xtn_local?replicaSet=xtn-local",
+  "adminLogin": "passed",
+  "adminPages": 6,
+  "consoleErrors": 0,
+  "mongoRestart": "recovered",
+  "persistedAdminIdentity": "unchanged",
+  "cloudConnection": false
+}

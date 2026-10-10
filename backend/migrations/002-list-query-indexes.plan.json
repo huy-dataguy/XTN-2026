@@ -1,0 +1,150 @@
+{
+  "status": "ready",
+  "migrationId": "002-list-query-indexes",
+  "indexes": [
+    {
+      "model": "Product",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Stable createdAt/_id pagination, including admin and active-list queries"
+    },
+    {
+      "model": "User",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Stable createdAt/_id pagination, including admin and active-list queries"
+    },
+    {
+      "model": "Order",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Stable createdAt/_id pagination, including admin and active-list queries"
+    },
+    {
+      "model": "Report",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Stable createdAt/_id pagination, including admin and active-list queries"
+    },
+    {
+      "model": "Statement1",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Stable createdAt/_id pagination, including admin and active-list queries"
+    },
+    {
+      "model": "Task",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Stable createdAt/_id pagination, including admin and active-list queries"
+    },
+    {
+      "model": "Tag",
+      "name": "created_page",
+      "key": {
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Stable createdAt/_id pagination, including admin and active-list queries"
+    },
+    {
+      "model": "Order",
+      "name": "schema_member_created",
+      "key": {
+        "schemaVersion": 1,
+        "memberId": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Versioned member list pagination"
+    },
+    {
+      "model": "Order",
+      "name": "schema_created",
+      "key": {
+        "schemaVersion": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Versioned admin list pagination"
+    },
+    {
+      "model": "Report",
+      "name": "schema_member_created",
+      "key": {
+        "schemaVersion": 1,
+        "memberId": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Versioned member list pagination"
+    },
+    {
+      "model": "Report",
+      "name": "schema_created",
+      "key": {
+        "schemaVersion": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Versioned admin list pagination"
+    },
+    {
+      "model": "User",
+      "name": "username_lookup",
+      "key": {
+        "username": 1
+      },
+      "reason": "Authentication lookup; deterministic username claim still controls write uniqueness",
+      "acceptExistingUnique": true
+    },
+    {
+      "model": "Report",
+      "name": "period_status_schema",
+      "key": {
+        "periodId": 1,
+        "status": 1,
+        "schemaVersion": 1
+      },
+      "reason": "Pending-report gate on closure"
+    },
+    {
+      "model": "Statement1",
+      "name": "reference_lookup",
+      "key": {
+        "reference": 1
+      },
+      "reason": "Duplicate import lookup; deterministic reference claim controls uniqueness"
+    },
+    {
+      "model": "Statement1",
+      "name": "tags_created",
+      "key": {
+        "tags": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Tag-filtered finance pagination; voided entries filtered after lookup"
+    }
+  ],
+  "autoIndex": false,
+  "authorization": "User authorized local migrations; no destructive operations."
+}

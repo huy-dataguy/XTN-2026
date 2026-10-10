@@ -1,0 +1,215 @@
+{
+  "status": "passed",
+  "verifiedAtUTC": "2026-10-10T04:49:35.149507+00:00",
+  "testDatabase": "xtn_refactor_test_run1791607719671208813",
+  "browserDatabase": "xtn_refactor_test_browser_1791607719671208813",
+  "steps": [
+    {
+      "name": "startup",
+      "command": [
+        "node",
+        "scripts/verify-startup.cjs"
+      ],
+      "cwd": ".",
+      "exitCode": 0,
+      "seconds": 3.32,
+      "log": "startup.txt"
+    },
+    {
+      "name": "indexes",
+      "command": [
+        "node",
+        "scripts/migrate-indexes.cjs",
+        "--apply"
+      ],
+      "cwd": ".",
+      "exitCode": 0,
+      "seconds": 0.77,
+      "log": "indexes.txt"
+    },
+    {
+      "name": "indexes-replay",
+      "command": [
+        "node",
+        "scripts/migrate-indexes.cjs",
+        "--apply"
+      ],
+      "cwd": ".",
+      "exitCode": 0,
+      "seconds": 0.32,
+      "log": "indexes-replay.txt"
+    },
+    {
+      "name": "backend",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "cwd": "backend",
+      "exitCode": 0,
+      "seconds": 4.43,
+      "log": "backend.txt"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "frontend",
+      "exitCode": 0,
+      "seconds": 2.5,
+      "log": "typecheck.txt"
+    },
+    {
+      "name": "lint",
+      "command": [
+        "npm",
+        "run",
+        "lint"
+      ],
+      "cwd": "frontend",
+      "exitCode": 0,
+      "seconds": 2.52,
+      "log": "lint.txt"
+    },
+    {
+      "name": "build",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "frontend",
+      "exitCode": 0,
+      "seconds": 2.63,
+      "log": "build.txt"
+    },
+    {
+      "name": "backend-audit",
+      "command": [
+        "npm",
+        "audit",
+        "--json"
+      ],
+      "cwd": "backend",
+      "exitCode": 0,
+      "seconds": 0.68,
+      "log": "backend-audit.txt"
+    },
+    {
+      "name": "frontend-audit",
+      "command": [
+        "npm",
+        "audit",
+        "--json"
+      ],
+      "cwd": "frontend",
+      "exitCode": 0,
+      "seconds": 0.68,
+      "log": "frontend-audit.txt"
+    },
+    {
+      "name": "browser-indexes",
+      "command": [
+        "node",
+        "scripts/migrate-indexes.cjs",
+        "--apply"
+      ],
+      "cwd": ".",
+      "exitCode": 0,
+      "seconds": 0.66,
+      "log": "browser-indexes.txt"
+    },
+    {
+      "name": "browser-seed",
+      "command": [
+        "node",
+        "scripts/seed-browser-fixture.js"
+      ],
+      "cwd": "backend",
+      "exitCode": 0,
+      "seconds": 0.3,
+      "log": "browser-seed.txt"
+    },
+    {
+      "name": "browser",
+      "command": [
+        "npm",
+        "run",
+        "test:e2e"
+      ],
+      "cwd": "frontend",
+      "exitCode": 0,
+      "seconds": 14.23,
+      "log": "browser.txt"
+    },
+    {
+      "name": "election",
+      "command": [
+        "node",
+        "scripts/verify-failover.cjs"
+      ],
+      "cwd": ".",
+      "exitCode": 0,
+      "seconds": 21.98,
+      "log": "election.txt"
+    }
+  ],
+  "scope": "Isolated real local Mongo + real HTTP + Chromium; dev DB is separate. No cloud connection or production migration.",
+  "sourceSha256": {
+    "backend/migrations/001-query-indexes.plan.json": "4a58ea971e6747c5e03af48d5bd5679d7d0c62f0cda5d8ae2b4e695c64e35c5f",
+    "backend/migrations/002-list-query-indexes.plan.json": "d81dd2e48054482348616816076bdd4e433dc8c8f4d6f43082f30ba0bd5271a2",
+    "backend/src/application/analytics.js": "16c23d5f3805d3b6ea1f0ad0822bcf727393f177f158f1ae257ebe3564b9a30f",
+    "backend/src/application/inventory-shared.js": "ada828ec69e21de12edcf9ce85de5e71dbc45c9617293b21a67b168275de8938",
+    "backend/src/application/inventory.js": "3060ef35fe8a20dae51eeb07d5b71dea0388e234f7dee008421fa464a9b83731",
+    "backend/src/application/orders.js": "0ea54079fd4a8859bf4ded9c0a0fef9d12b0f6d2866dd38531303ef97d26294a",
+    "backend/src/application/periods.js": "911a9251e44e22a527702b0d72fbac9f126eb6d1cb3284748325e143c94b7c7b",
+    "backend/src/application/reports.js": "8bed1f7d08e947b40a2cd2eb39cf30462bbcac8c6a1b17d46dc4e0ef37cde1f3",
+    "backend/src/domain/policy.js": "6ff30c5f32d355e58119c00e9706b6bb6c9bf5d7083c42546b15b24461d10ab5",
+    "backend/src/http/app.js": "18927504ef4e8dfc575ac1fde3acae426b16366e7d392a354f864b2130f857ea",
+    "backend/src/http/auth.js": "b03d9edc8034d895803bc37b61c4959798b48ce7906cd3a7fc52a175c516ce5d",
+    "backend/src/http/commerce-routes.js": "e968450e7361e0981622d84e4d44ae818a4cd02df6c99250d5835320ab882fd8",
+    "backend/src/http/period-routes.js": "72f5559e36f124f54c7b6c7553bcc6f784b98c5a65eabda2f38dcd0eda3f7301",
+    "backend/src/http/router-kit.js": "723e0a5ed770ca61795470c3a4a4177297dc1a4320a3b5f6f329ad8b56c239cf",
+    "backend/src/http/routes.js": "124519d9ae1e3c82bacd1ea7b7dc2a2f9c37990c545406c7d5ed7d10ed27fe80",
+    "backend/src/http/schemas.js": "42d0fe0dc371a4783edca0a6b25eb8397d43020ba3984bbe8bc568a062f3f90b",
+    "backend/src/http/staff-routes.js": "5c82fab7cffa4e6f86a4ef671fc08e7c6eeb97140eae4f3711a0156999d35f21",
+    "backend/src/infrastructure/config.js": "37141f604127d622cbc38a52f634786345d06813c47dc0d897fed125d6da2347",
+    "backend/src/infrastructure/models.js": "0fae93814276b502aace0c78fa0a5ae4ef7957a143e6575a6844fcadf3b4c735",
+    "backend/src/infrastructure/transaction.js": "2809ee982e73e8fe1aa5367ee5090a4ae510ad96879e05fc283405bd30af7426",
+    "backend/test/domain.test.js": "5dde229f9dee2a80ac0fe9d3268ee5fde19744f5a592636c50b9b2ada8b62e2b",
+    "backend/test/integration.test.js": "c8f75d8e778686aa66c6bb65fab5440a69e32e8fedc386590538133e5b391402",
+    "frontend/e2e/commerce.spec.ts": "4112a13e6f0168b54fabe8fd6ecc9df9dc8517c879ad7b1560fc80968f3c1265",
+    "frontend/src/App.tsx": "98e2e1e210e57503496fb1a79a2de47964d78cea99e9af71ce8354e753415e67",
+    "frontend/src/assets/avatar.png": "fa08a10e178a6dd1f98f7cd4fd841495d752f6e49954245bd7e02bdd408e3784",
+    "frontend/src/assets/react.svg": "35ef61ed53b323ae94a16a8ec659b3d0af3880698791133f23b084085ab1c2e5",
+    "frontend/src/assets/vvnspkt.webp": "fcd99e98fc368a93dfbdc44d147a6e87fe6e802c7ae2b3a75422d9d9044eddd7",
+    "frontend/src/features/auth.tsx": "76971d999b9c595a6e9348022e468afe900574dfbe70a0c8a5c16c663a0bfa2f",
+    "frontend/src/features/dashboard.tsx": "cecb693b7ef7ecc967595eae117561760cde2abd2419cca81bb13b06d98508d8",
+    "frontend/src/features/inventory.tsx": "160635b9bf42b7319cc87ad4b251fb8bb1014cd16d8116fc40ecbf5183809d92",
+    "frontend/src/features/members.tsx": "2184a97b13daeecac632ed467387b96f56b2dbb7c0fd8d1e150a275f447be585",
+    "frontend/src/features/operations.tsx": "45a8df33c4dff22b350c7765664c4ad7e8e319e2d04dc987259afbbf77cec1f6",
+    "frontend/src/features/orders.tsx": "b7c7e6291c67ccfc6b7b50b39535cb1df9a09965efefb5707a368c64a71c90b3",
+    "frontend/src/features/reports.tsx": "63d313bccc68b7b142fa6e33979e64c4911f7ee13d88d51d95e1038d10be32e4",
+    "frontend/src/index.css": "90d9c9733aac65f40d2b54872dd40842bfb9f47494e5825c86b83afc0c9812f5",
+    "frontend/src/main.tsx": "36d495d6219c804035f009693df7052ad4400a9ce974bf1b5424b185a8c146d0",
+    "frontend/src/shared/api.ts": "dbab9bca9e4f41783fa92bde24748f3c3f368155dc288d5e407a5d084710d5d6",
+    "frontend/src/shared/types.ts": "8bf55f98addc28343597e70fbe58bdadbcbfccf547c901648c56d1bf598cbd34",
+    "frontend/src/shared/ui.tsx": "75a492398b2b29f6fcbcbd5faa0f48eee9b858273c346004bb7a308ed1059e65",
+    "frontend/src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+    "infra/compose.local.yml": "5d58910da72fd38b855a8536b4f1861dee1d68b12f8645e28eb5b987e44ae22a",
+    "scripts/exercise-scale.cjs": "1bea3c12d65057f636f75f096e2c52b15eeb0b12b774650e329cc9cbf9871a91",
+    "scripts/inspect-query-plans.cjs": "40f92519804a4977da554031c6576088428fa7ba0f1422c3011f28e920997f21",
+    "scripts/measure-scale.cjs": "6978c3ec0197b389bf864ac8e5415ab5c55746befeae27a9e82e8169221ee45a",
+    "scripts/migrate-indexes.cjs": "fbf2c2c20cfe84c6b32f7ae03be15225f4ffc0c0bc1f2391ff6b9da160d1f530",
+    "scripts/seed-scale.cjs": "f6fe817588600f27c92b302af07443d8efa6f893c056cfea2a96b8279470005f",
+    "scripts/start-local-mongo.sh": "6125ef21d4cfba20ddf6ce5ef85dc48f32493a8006355828fb7e63ab2be07643",
+    "scripts/start-test-mongo.sh": "ed26c5f58778f2e0718e40c56bbc9e6adaeb565c9153c8bb3976547d2836a200",
+    "scripts/verify-failover.cjs": "98ef16bc2fb255bf55950e11638a936bbd0d8451feff22e69e943d93d90c51d5",
+    "scripts/verify-full.py": "e26d6108c8fe75cdb4a7ad94e0159f65b05f5d02bc7f13a8d3741ed9d9908d44",
+    "scripts/verify-local.cjs": "66e9c590f86ed1580a7cb8a926f09561bef65dedc1d553e4c01dec5a7341242c",
+    "scripts/verify-startup.cjs": "43e5aa75f94ea46d9137f8da873435665f02ffe77e83422a6335b20202584bdb"
+  }
+}

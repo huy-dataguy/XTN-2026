@@ -1,0 +1,4 @@
+Normalized form: *-*-* 02:30:00 Asia/Ho_Chi_Minh
+    Next elapse: Sun 2026-10-11 02:30:00 +07
+       (in UTC): Sat 2026-10-10 19:30:00 UTC
+       From now: 13h left

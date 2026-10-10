@@ -1,0 +1,73 @@
+{
+  "status": "passed",
+  "concurrency": 5,
+  "readRequests": 10,
+  "realOrderWorkflows": 20,
+  "idempotentDuplicateCalls": 20,
+  "approvedReports": 20,
+  "realWarehousePhysical": 80,
+  "realRevenue": 400000,
+  "realContribution": -80000,
+  "browser": {
+    "membersInDatabase": 1000,
+    "membersPerPage": 20,
+    "detailRowsPerPage": 520,
+    "loadAndRenderMs": 2479,
+    "pagination": "totals unchanged",
+    "jsErrors": [],
+    "mobileOverflow": false
+  },
+  "latency": {
+    "reads": {
+      "requests": 10,
+      "p50Ms": 4625,
+      "p95Ms": 5436,
+      "maxMs": 5446
+    },
+    "create": {
+      "requests": 40,
+      "p50Ms": 126,
+      "p95Ms": 616,
+      "maxMs": 669
+    },
+    "approve": {
+      "requests": 20,
+      "p50Ms": 42,
+      "p95Ms": 49,
+      "maxMs": 54
+    },
+    "receive": {
+      "requests": 20,
+      "p50Ms": 76,
+      "p95Ms": 691,
+      "maxMs": 951
+    },
+    "report": {
+      "requests": 20,
+      "p50Ms": 57,
+      "p95Ms": 515,
+      "maxMs": 788
+    },
+    "post": {
+      "requests": 20,
+      "p50Ms": 109,
+      "p95Ms": 601,
+      "maxMs": 869
+    },
+    "close": {
+      "requests": 1,
+      "p50Ms": 77,
+      "p95Ms": 77,
+      "maxMs": 77
+    }
+  },
+  "queryPlan": {
+    "nReturned": 88,
+    "totalDocsExamined": 88,
+    "totalKeysExamined": 88,
+    "executionTimeMillis": 0
+  },
+  "limitations": "Synthetic seeded history + actual HTTP transactions. Local one-host measurements with secondary indexes; queryPlan records actual use. This is not production capacity or an unlimited scalability guarantee.",
+  "evidenceAnnotation": "Corrected the stale no-secondary-indexes descriptive label. Timings, counts and queryPlan unchanged; raw output retained in traffic-indexed-run.txt.",
+  "executedScriptSha256": "e63953bf060d560dab79570d3de6bbc8cb219ec55ef61db2b22cda9e1e76c40b"
+}

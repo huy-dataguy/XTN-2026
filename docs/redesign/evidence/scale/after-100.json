@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "scope": "Real HTTP on Node API and real local three-node Mongo; synthetic historical fixture, no mock",
+  "label": "after",
+  "members": 100,
+  "counts": {
+    "User": 101,
+    "Product": 200,
+    "Receipt": 2600,
+    "Report": 5210,
+    "Movement": 10620,
+    "MemberPeriod": 2600
+  },
+  "accuracy": "Independent fixture totals and sampled closing stock match",
+  "timings": [
+    {
+      "ms": 420,
+      "bytes": 818511,
+      "rssMB": 173,
+      "detailRows": 1300,
+      "membersReturned": 50
+    },
+    {
+      "ms": 379,
+      "bytes": 818511,
+      "rssMB": 217,
+      "detailRows": 1300,
+      "membersReturned": 50
+    },
+    {
+      "ms": 355,
+      "bytes": 818511,
+      "rssMB": 254,
+      "detailRows": 1300,
+      "membersReturned": 50
+    }
+  ]
+}

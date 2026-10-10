@@ -1,0 +1,26 @@
+[dotenv@17.2.3] injecting env (2) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+{"event":"started","port":5003}
+{"event":"analytics-profile","phase":"members","ms":18}
+{"event":"analytics-profile","phase":"states","ms":262}
+{"event":"analytics-profile","phase":"report-headers","ms":630}
+{"event":"analytics-profile","phase":"opening","ms":4}
+{"event":"analytics-profile","phase":"inventory-range","ms":580}
+{"event":"analytics-profile","phase":"financial-range","ms":802}
+{"event":"analytics-profile","phase":"member-totals","ms":256}
+{"event":"analytics-profile","phase":"warehouse-costs","ms":3}
+{"event":"analytics-profile","phase":"members","ms":10}
+{"event":"analytics-profile","phase":"states","ms":177}
+{"event":"analytics-profile","phase":"report-headers","ms":553}
+{"event":"analytics-profile","phase":"opening","ms":2}
+{"event":"analytics-profile","phase":"inventory-range","ms":554}
+{"event":"analytics-profile","phase":"financial-range","ms":784}
+{"event":"analytics-profile","phase":"member-totals","ms":258}
+{"event":"analytics-profile","phase":"warehouse-costs","ms":5}
+{"event":"analytics-profile","phase":"members","ms":7}
+{"event":"analytics-profile","phase":"states","ms":169}
+{"event":"analytics-profile","phase":"report-headers","ms":548}
+{"event":"analytics-profile","phase":"opening","ms":2}
+{"event":"analytics-profile","phase":"inventory-range","ms":534}
+{"event":"analytics-profile","phase":"financial-range","ms":849}
+{"event":"analytics-profile","phase":"member-totals","ms":264}
+{"event":"analytics-profile","phase":"warehouse-costs","ms":2}

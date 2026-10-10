@@ -1,0 +1,1 @@
+{"User":101,"Product":200,"Receipt":2600,"Report":5210,"Movement":10620,"MemberPeriod":2600}

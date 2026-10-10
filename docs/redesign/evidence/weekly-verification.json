@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-09",
+  "checks": [
+    {
+      "command": "node scripts/audit-probes.cjs",
+      "exitCode": 0,
+      "artifact": "baseline-probes.json",
+      "stderr": "",
+      "scope": "isolated; no real DB/browser/concurrency proof"
+    },
+    {
+      "command": "node scripts/weekly-calculation-probes.cjs",
+      "exitCode": 0,
+      "artifact": "weekly-calculation-probes.json",
+      "stderr": "",
+      "scope": "isolated; no real DB/browser/concurrency proof"
+    }
+  ],
+  "notRun": [
+    "real DB rollback/concurrency/failover",
+    "browser E2E",
+    "production reconciliation"
+  ]
+}

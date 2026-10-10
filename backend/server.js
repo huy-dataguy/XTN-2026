@@ -1,28 +1,31 @@
-// server.js
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-
-const app = express();
-
-// Middleware
-app.use(cors()); // Cho phép Frontend gọi API
-app.use(express.json()); // Đọc dữ liệu JSON từ request
-
-// Connect MongoDB Atlas
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ Connected to MongoDB Atlas'))
-  .catch((err) => console.error('❌ DB Connection Error:', err));
-
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/reports', require('./routes/reports'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/statements', require('./routes/statements')); 
-app.use('/api/tasks', require('./routes/tasks'));
-app.use('/api/tags', require('./routes/tags'));
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+require("dotenv").config();
+const { mongoose } = require("./src/infrastructure/models");
+const { configuration } = require("./src/infrastructure/config");
+const { createApp } = require("./src/http/app");
+async function start() {
+  const config = configuration();
+  await mongoose.connect(config.mongoUri, {
+    autoIndex: false,
+    serverSelectionTimeoutMS: 10000,
+  });
+  const topology = await mongoose.connection.db.admin().command({ hello: 1 });
+  if (!topology.setName && topology.msg !== "isdbgrid")
+    throw new Error(
+      "A MongoDB replica set or sharded cluster is required for transactions",
+    );
+  const server = createApp(config).listen(config.port, () =>
+    console.log(JSON.stringify({ event: "started", port: config.port })),
+  );
+  for (const signal of ["SIGINT", "SIGTERM"])
+    process.once(signal, () => {
+      server.close(() => mongoose.disconnect().then(() => process.exit(0)));
+      setTimeout(() => process.exit(1), 10000).unref();
+    });
+}
+if (require.main === module)
+  start().catch(async (error) => {
+    console.error(error.message);
+    await mongoose.disconnect();
+    process.exitCode = 1;
+  });
+module.exports = { start };

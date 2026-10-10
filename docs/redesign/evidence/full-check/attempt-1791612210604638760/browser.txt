@@ -1,0 +1,17 @@
+
+> frontend@0.0.0 test:e2e
+> playwright test
+
+[WebServer] (node:348913) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:348988) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 e2e/commerce.spec.ts:16:1 › admin creates stock; member requests, receives, reports; server-derived dashboard agrees (5.6s)
+  ✓  2 e2e/commerce.spec.ts:95:1 › admin manages member targets, cash reference and internal work (2.2s)
+  ✓  3 e2e/commerce.spec.ts:146:1 › approved correction preserves history and recalculates member stock and revenue (2.8s)
+  ✓  4 e2e/commerce.spec.ts:182:1 › finance tags filter without double counting; void and task archive are effective (1.8s)
+
+  4 passed (13.6s)

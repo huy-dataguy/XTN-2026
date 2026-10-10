@@ -1,0 +1,177 @@
+{
+  "status": "passed",
+  "database": "xtn_refactor_test_scale_indexed1000",
+  "queries": {
+    "adminReports": {
+      "nReturned": 51,
+      "totalDocsExamined": 52120,
+      "totalKeysExamined": 0,
+      "executionTimeMillis": 67,
+      "winningPlan": {
+        "stage": "SORT",
+        "sortPattern": {
+          "createdAt": -1,
+          "_id": -1
+        },
+        "memLimit": 104857600,
+        "limitAmount": 51,
+        "type": "simple",
+        "inputStage": {
+          "stage": "COLLSCAN",
+          "filter": {
+            "schemaVersion": {
+              "$eq": 1
+            }
+          },
+          "direction": "forward"
+        }
+      }
+    },
+    "memberReports": {
+      "nReturned": 51,
+      "totalDocsExamined": 57,
+      "totalKeysExamined": 57,
+      "executionTimeMillis": 0,
+      "winningPlan": {
+        "stage": "SORT",
+        "sortPattern": {
+          "createdAt": -1,
+          "_id": -1
+        },
+        "memLimit": 104857600,
+        "limitAmount": 51,
+        "type": "simple",
+        "inputStage": {
+          "stage": "FETCH",
+          "filter": {
+            "schemaVersion": {
+              "$eq": 1
+            }
+          },
+          "inputStage": {
+            "stage": "IXSCAN",
+            "keyPattern": {
+              "memberId": 1,
+              "periodId": 1,
+              "status": 1
+            },
+            "indexName": "member_period_status",
+            "isMultiKey": false,
+            "multiKeyPaths": {
+              "memberId": [],
+              "periodId": [],
+              "status": []
+            },
+            "isUnique": false,
+            "isSparse": false,
+            "isPartial": false,
+            "indexVersion": 2,
+            "direction": "forward",
+            "indexBounds": {
+              "memberId": [
+                "[ObjectId('6ac9c14e3dcfb71404f9e6b3'), ObjectId('6ac9c14e3dcfb71404f9e6b3')]"
+              ],
+              "periodId": [
+                "[MinKey, MaxKey]"
+              ],
+              "status": [
+                "[MinKey, MaxKey]"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "memberHistory": {
+      "nReturned": 88,
+      "totalDocsExamined": 88,
+      "totalKeysExamined": 88,
+      "executionTimeMillis": 0,
+      "winningPlan": {
+        "stage": "FETCH",
+        "inputStage": {
+          "stage": "IXSCAN",
+          "keyPattern": {
+            "memberId": 1,
+            "effectiveAt": 1,
+            "lotId": 1
+          },
+          "indexName": "member_effective_lot",
+          "isMultiKey": false,
+          "multiKeyPaths": {
+            "memberId": [],
+            "effectiveAt": [],
+            "lotId": []
+          },
+          "isUnique": false,
+          "isSparse": false,
+          "isPartial": false,
+          "indexVersion": 2,
+          "direction": "forward",
+          "indexBounds": {
+            "memberId": [
+              "[ObjectId('6ac9c14e3dcfb71404f9e6b3'), ObjectId('6ac9c14e3dcfb71404f9e6b3')]"
+            ],
+            "effectiveAt": [
+              "[MinKey, MaxKey]"
+            ],
+            "lotId": [
+              "[MinKey, MaxKey]"
+            ]
+          }
+        }
+      }
+    },
+    "username": {
+      "nReturned": 1,
+      "totalDocsExamined": 2,
+      "totalKeysExamined": 0,
+      "executionTimeMillis": 0,
+      "winningPlan": {
+        "stage": "LIMIT",
+        "limitAmount": 1,
+        "inputStage": {
+          "stage": "PROJECTION_SIMPLE",
+          "transformBy": {
+            "password": 0
+          },
+          "inputStage": {
+            "stage": "COLLSCAN",
+            "filter": {
+              "username": {
+                "$eq": "scale-0"
+              }
+            },
+            "direction": "forward"
+          }
+        }
+      }
+    },
+    "adminUsers": {
+      "nReturned": 51,
+      "totalDocsExamined": 1001,
+      "totalKeysExamined": 0,
+      "executionTimeMillis": 1,
+      "winningPlan": {
+        "stage": "PROJECTION_SIMPLE",
+        "transformBy": {
+          "password": 0
+        },
+        "inputStage": {
+          "stage": "SORT",
+          "sortPattern": {
+            "createdAt": -1,
+            "_id": -1
+          },
+          "memLimit": 104857600,
+          "limitAmount": 51,
+          "type": "simple",
+          "inputStage": {
+            "stage": "COLLSCAN",
+            "direction": "forward"
+          }
+        }
+      }
+    }
+  }
+}

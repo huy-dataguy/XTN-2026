@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "previousSoftLimit": 1024,
+  "configuredSoftAndHardLimit": 64000,
+  "testNodes": [
+    "xtn-refactor-test",
+    "xtn-refactor-secondary-1",
+    "xtn-refactor-secondary-2"
+  ],
+  "testVolumesPreserved": true,
+  "runningContainers": [
+    {
+      "container": "xtn-prod-verify-mongo-1",
+      "soft": 64000,
+      "hard": 64000
+    },
+    {
+      "container": "xtn-prod-restore-verify-mongo-1",
+      "soft": 64000,
+      "hard": 64000
+    },
+    {
+      "container": "xtn-local-mongo-1",
+      "soft": 64000,
+      "hard": 64000
+    },
+    {
+      "container": "xtn-refactor-test",
+      "soft": 64000,
+      "hard": 64000
+    },
+    {
+      "container": "xtn-refactor-secondary-1",
+      "soft": 64000,
+      "hard": 64000
+    },
+    {
+      "container": "xtn-refactor-secondary-2",
+      "soft": 64000,
+      "hard": 64000
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "apiChecks": [
+    {
+      "endpoint": "orders",
+      "status": 200
+    },
+    {
+      "endpoint": "reports",
+      "status": 200
+    },
+    {
+      "endpoint": "inventory",
+      "status": 200
+    },
+    {
+      "endpoint": "users",
+      "status": 200
+    },
+    {
+      "endpoint": "statements",
+      "status": 200
+    },
+    {
+      "endpoint": "tasks",
+      "status": 200
+    }
+  ],
+  "failedResponses": [],
+  "jsErrors": []
+}

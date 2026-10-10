@@ -1,0 +1,5 @@
+{
+  "status": "passed",
+  "invalidChecksumRejectedBeforeStoppingService": true,
+  "apiStillHealthy": true
+}

@@ -1,0 +1,93 @@
+{
+  "status": "ready",
+  "migrationId": "001-query-indexes",
+  "autoIndex": false,
+  "humanGateRequired": false,
+  "indexes": [
+    {
+      "model": "InventoryMovement",
+      "name": "member_effective_lot",
+      "key": {
+        "memberId": 1,
+        "effectiveAt": 1,
+        "lotId": 1
+      },
+      "reason": "Member inventory history, chronology and opening/range balances"
+    },
+    {
+      "model": "InventoryMovement",
+      "name": "effective_kind_period_source",
+      "key": {
+        "effectiveAt": 1,
+        "kind": 1,
+        "periodId": 1,
+        "sourceId": 1
+      },
+      "reason": "Organization-wide time-window accounting and warehouse costs"
+    },
+    {
+      "model": "InventoryMovement",
+      "name": "source_kind",
+      "key": {
+        "sourceId": 1,
+        "kind": 1
+      },
+      "reason": "Correction reversal lookup"
+    },
+    {
+      "model": "Report",
+      "name": "member_period_status",
+      "key": {
+        "memberId": 1,
+        "periodId": 1,
+        "status": 1
+      },
+      "reason": "Weekly submission headers and status"
+    },
+    {
+      "model": "Receipt",
+      "name": "member_effective",
+      "key": {
+        "memberId": 1,
+        "effectiveAt": 1
+      },
+      "reason": "Member receipt lots"
+    },
+    {
+      "model": "MemberPeriod",
+      "name": "period_member",
+      "key": {
+        "periodId": 1,
+        "memberId": 1
+      },
+      "reason": "Weekly states and closure; deterministic _id still supplies identity"
+    },
+    {
+      "model": "Order",
+      "name": "member_created",
+      "key": {
+        "memberId": 1,
+        "createdAt": -1,
+        "_id": -1
+      },
+      "reason": "Member order pagination"
+    },
+    {
+      "model": "User",
+      "name": "role_created",
+      "key": {
+        "role": 1,
+        "createdAt": 1,
+        "_id": 1
+      },
+      "reason": "Stable member calendar and pagination"
+    }
+  ],
+  "reviewRequirements": [
+    "Inspect actual collection bindings and existing indexes; do not drop existing indexes.",
+    "Review EXPLAIN before/after on the same data and concurrency; a proposal is not performance proof.",
+    "Review write amplification, disk space and maintenance schedule before migration.",
+    "No unique member/week report constraint: multiple delta submissions per week are required."
+  ],
+  "authorization": "User explicitly authorized local migration in this session; legacy skill approval gate overridden."
+}

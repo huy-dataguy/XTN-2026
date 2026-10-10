@@ -1,0 +1,10 @@
+[Unit]
+Description=XTN daily application database backup
+After=docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/XTN-2026
+Environment=XTN_DEPLOY_DIR=/opt/XTN-2026/.local/production
+ExecStart=/usr/bin/bash scripts/production.sh backup
+UMask=0077

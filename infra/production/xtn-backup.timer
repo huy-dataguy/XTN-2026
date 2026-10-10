@@ -1,0 +1,7 @@
+[Unit]
+Description=XTN backup every day at 02:30 Vietnam time
+[Timer]
+OnCalendar=*-*-* 02:30:00 Asia/Ho_Chi_Minh
+Persistent=true
+[Install]
+WantedBy=timers.target

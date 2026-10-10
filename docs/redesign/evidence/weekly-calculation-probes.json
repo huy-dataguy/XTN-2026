@@ -1,0 +1,102 @@
+{
+  "mode": "extracted-baseline-calculations-and-independent-fixture",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "results": [
+    {
+      "id": "W01-approved-not-received",
+      "kind": "baseline-defect-reproduced",
+      "evidence": {
+        "baselineReceived": 10,
+        "actualReceived": 0
+      }
+    },
+    {
+      "id": "W02-sunday-receipt-excluded",
+      "kind": "baseline-defect-reproduced",
+      "evidence": {
+        "baselineReceived": 0,
+        "actualW1Receipt": 5
+      }
+    },
+    {
+      "id": "W03-duplicate-lines-under-counted",
+      "kind": "baseline-defect-reproduced",
+      "evidence": {
+        "baselineReceived": 2,
+        "totalReceiptLines": 5
+      }
+    },
+    {
+      "id": "W04-first-report-of-tied-week-selected",
+      "kind": "baseline-defect-reproduced",
+      "evidence": {
+        "baselineOpening": 8,
+        "chronologicalClosing": 5
+      }
+    },
+    {
+      "id": "W05-local-monday-utc-sunday-key",
+      "kind": "baseline-defect-reproduced",
+      "evidence": {
+        "baselineUtcDateKey": "2026-10-04",
+        "canonicalPeriodId": "2026-10-05"
+      }
+    },
+    {
+      "id": "W06-chart-collides-across-years",
+      "kind": "baseline-defect-reproduced",
+      "evidence": {
+        "chartRows": 1,
+        "expectedPeriods": 2,
+        "combinedRevenue": 30
+      }
+    },
+    {
+      "id": "W07-distributor-status-mismatch",
+      "kind": "baseline-defect-reproduced",
+      "evidence": {
+        "baseline": {
+          "totalRevenue": 20,
+          "itemsSold": 5,
+          "totalOrdered": 100
+        },
+        "acceptedSold": 2,
+        "rejectedOrderIncludedInCost": true
+      }
+    },
+    {
+      "id": "R01-two-period-damage-gift-and-kpi",
+      "kind": "proposed-formula-fixture-only",
+      "evidence": {
+        "W1": {
+          "sellable": 13,
+          "damaged": 0,
+          "physical": 13,
+          "revenue": 120000,
+          "cogs": 72000,
+          "gross": 48000,
+          "damageExpense": 18000,
+          "giftExpense": 12000,
+          "contribution": 18000,
+          "achievement": 60
+        },
+        "W2": {
+          "sellable": 8,
+          "damaged": 0,
+          "physical": 8,
+          "revenue": 100000,
+          "cogs": 60000,
+          "gross": 40000,
+          "damageExpense": 0,
+          "giftExpense": 0,
+          "contribution": 40000,
+          "achievement": 33.33333333333333
+        },
+        "rangeRevenue": 220000,
+        "rangeContribution": 58000,
+        "rangeAchievement": 44,
+        "rangeClosingStock": 8
+      }
+    }
+  ]
+}

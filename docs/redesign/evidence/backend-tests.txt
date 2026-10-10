@@ -1,0 +1,29 @@
+
+> test
+> node --test test/*.test.js
+
+✔ Vietnam Monday boundary, full calendar keys and bounded ranges (4.69588ms)
+✔ historical timeline rejects a sale before receipt even if final balance positive (0.535712ms)
+✔ damage then gift consumes physical quantity and expense once (0.330061ms)
+✔ missing cost stays unknown; safe integer overflow rejected (0.373231ms)
+✔ fail-closed signup, admin-only internal resources, no hash leak, legacy API closed (331.097441ms)
+✔ multi-line failure rolls back reservation and order; negative/empty input rejected (73.445433ms)
+✔ concurrent requests for stock=1 allow one; same key replays and payload conflict rejected (128.3869ms)
+✔ partial receipts, ownership, cancellation and amendment release only remaining reservation (166.185749ms)
+✔ two-week ledger: multiple receipts/reports, late submission, damage→gift, snapshots, weighted KPI, correction (774.557343ms)
+✔ legacy uninitialized inventory refused, unknown cost null, revoked user token rejected (204.813127ms)
+✔ concurrent sales in different periods cannot oversell the same lot (236.587257ms)
+✔ member completion, weighted multi-week KPI, close guard, closed writes and reopen (177.398827ms)
+✔ warehouse damage/gift, financial references, cash totals and immutable void (92.182587ms)
+✔ forged totals rejected; money overflow rolls back; order amendment changes reservation delta (112.940108ms)
+✔ expired reporting requires extension; pending amendments and password reset revoke previous sessions (469.265271ms)
+✔ partial product patch preserves costing and tag filters are non-additive (113.076151ms)
+✔ backdated receipt and later period close serialize; receipts cannot precede membership (166.725058ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3528.089921

@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "origin": "https://localhost:18443",
+  "mode": "existing",
+  "tls": "Node client validates HTTPS with the local Caddy CA; Chromium accepts this local CA exception",
+  "realOrderWorkflows": 20,
+  "partialReceipts": 40,
+  "deltaReports": 40,
+  "corrections": 1,
+  "duplicateCalls": 20,
+  "expected": {
+    "revenue": 390000,
+    "contribution": -102000,
+    "warehousePhysical": 77,
+    "memberPhysical": 41,
+    "cashIn": 150000,
+    "cashOut": 0
+  },
+  "memberStock": 41,
+  "browser": {
+    "pages": 6,
+    "errors": []
+  },
+  "sustained": {
+    "seconds": 0,
+    "requests": 0,
+    "clients": 5
+  },
+  "httpRequests": 15,
+  "p95Ms": 262
+}
