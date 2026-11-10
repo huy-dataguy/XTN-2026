@@ -1,8 +1,20 @@
 import { z } from "zod";
-const base = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(
-  /\/$/,
-  "",
-);
+function resolveApiBase() {
+  const envBase = import.meta.env.VITE_API_BASE_URL;
+  if (envBase) return envBase.replace(/\/$/, "");
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const override =
+      params.get("api") ||
+      window.localStorage.getItem("xtn_api_base_url");
+    if (override) return override.replace(/\/$/, "");
+    if (window.location.hostname.endsWith(".vercel.app")) {
+      return "https://datalab.tailcba9a1.ts.net/api/v1";
+    }
+  }
+  return "/api/v1";
+}
+const base = resolveApiBase();
 const tokenKey = "xtn_session";
 export const session = {
   get: () => sessionStorage.getItem(tokenKey),

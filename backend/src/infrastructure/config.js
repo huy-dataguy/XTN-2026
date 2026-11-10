@@ -8,7 +8,7 @@ function configuration(env = process.env) {
   if (![0, 1].includes(trustProxyHops))
     throw new Error("TRUST_PROXY_HOPS must be 0 or 1");
   const origins = (
-    env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173"
+    env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173,https://volunteer-vovinam-hcmute.vercel.app"
   )
     .split(",")
     .map((s) => s.trim());
