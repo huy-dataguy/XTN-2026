@@ -25,7 +25,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       <div className="login">
         <div className="login-story">
           <div className="brand">
-            Chiến dịch Xuân Tình Nguyện<span>    CLB Vovinam HCM-UTE</span>
+            Chiến dịch Xuân Tình Nguyện<span>  Vovinam HCM-UTE</span>
           </div>
           <h1>
             Góp sức nhỏ,
