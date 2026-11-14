@@ -3,7 +3,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const { rateLimit } = require("express-rate-limit");
 const { randomUUID } = require("node:crypto");
-const { mongoose } = require("../infrastructure/models");
+const { getPool } = require("../infrastructure/db");
 const { authRoutes, authentication } = require("./auth");
 const { routes } = require("./routes");
 function createApp(config) {
@@ -35,9 +35,7 @@ function createApp(config) {
   app.get("/health/live", (req, res) => res.json({ status: "ok" }));
   app.get("/health/ready", async (req, res, next) => {
     try {
-      if (mongoose.connection.readyState !== 1)
-        return res.status(503).json({ status: "unavailable" });
-      await mongoose.connection.db.command({ ping: 1 });
+      await getPool().query("SELECT 1");
       res.json({ status: "ready" });
     } catch {
       res.status(503).json({ status: "unavailable" });
@@ -87,11 +85,17 @@ function createApp(config) {
     let status = error.status || 500,
       code = error.code || "INTERNAL_ERROR",
       message = error.message;
-    if (error.name === "ValidationError" || error.name === "CastError") {
+    if (
+      error.name === "ValidationError" ||
+      error.name === "CastError" ||
+      error.code === "23502" ||
+      error.code === "23514" ||
+      error.code === "22P02"
+    ) {
       status = 400;
       code = "VALIDATION";
     }
-    if (error.code === 11000) {
+    if (error.code === "23505" || error.code === "11000") {
       status = 409;
       code = "DUPLICATE";
       message = "Dữ liệu hoặc mã giao dịch đã tồn tại";

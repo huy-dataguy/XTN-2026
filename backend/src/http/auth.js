@@ -1,7 +1,8 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { Router } = require("express");
-const { User, Command, mongoose } = require("../infrastructure/models");
+const { withTransaction } = require("../infrastructure/db");
+const repo = require("../infrastructure/repository");
 const { entity } = require("../infrastructure/transaction");
 const { parse, z, fail } = require("../domain/policy");
 const schemas = require("./schemas");
@@ -20,14 +21,14 @@ function authentication(config) {
       } catch {
         fail(401, "SESSION_EXPIRED", "Phiên đăng nhập không còn hợp lệ");
       }
-      const user = await User.findById(decoded.sub).lean();
+      const user = await repo.getUserById(undefined, decoded.sub);
       if (
         !user ||
         user.active === false ||
         (user.tokenVersion || 0) !== decoded.version
       )
         fail(401, "SESSION_EXPIRED", "Phiên đã bị thu hồi");
-      req.actor = { ...entity(user), id: String(user._id) };
+      req.actor = { ...entity(user), id: user.id };
       next();
     } catch (error) {
       next(error);
@@ -46,11 +47,12 @@ function authRoutes(config, authenticatedLimit) {
         .strict(),
       req.body,
     );
-    const user = await User.findOne({
-      username: input.username,
-      active: { $ne: false },
-    }).select("+password");
-    if (!user || !(await bcrypt.compare(input.password, user.password)))
+    const user = await repo.getUserByUsername(undefined, input.username);
+    if (
+      !user ||
+      user.active === false ||
+      !(await bcrypt.compare(input.password, user.password))
+    )
       fail(
         401,
         "INVALID_CREDENTIALS",
@@ -83,13 +85,16 @@ function authRoutes(config, authenticatedLimit) {
     )
       fail(403, "INVITE_REQUIRED", "Chỉ đăng ký thành viên bằng mã mời hợp lệ");
     const password = await bcrypt.hash(input.password, 12);
-    const user = await mongoose.connection.transaction(async (session) => {
-      if (await User.exists({ username: input.username }).session(session))
+    const user = await withTransaction(async (tx) => {
+      if (await repo.usernameExists(tx, input.username))
         fail(409, "DUPLICATE_USERNAME", "Tên đăng nhập đã tồn tại");
-      await Command.create([{ _id: `username:${input.username}` }], {
-        session,
+      const claimed = await repo.claimCommand(tx, {
+        id: `username:${input.username}`,
+        requestHash: null,
       });
-      return (await User.create([{ ...input, password }], { session }))[0];
+      if (!claimed)
+        fail(409, "DUPLICATE_USERNAME", "Tên đăng nhập đã tồn tại");
+      return repo.createUser(tx, { ...input, password });
     });
     res.status(201).json(entity(user));
   });
@@ -97,7 +102,7 @@ function authRoutes(config, authenticatedLimit) {
   if (authenticatedLimit) router.use(authenticatedLimit);
   router.get("/me", (req, res) => res.json(req.actor));
   router.post("/logout", async (req, res) => {
-    await User.updateOne({ _id: req.actor.id }, { $inc: { tokenVersion: 1 } });
+    await withTransaction((tx) => repo.bumpTokenVersion(tx, req.actor.id));
     res.json({ ok: true });
   });
   router.post("/impersonate/:id", (req, res) =>

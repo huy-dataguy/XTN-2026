@@ -1,3 +1,7 @@
+> **Lỗi thời (2026-11-14):** backend đã chuyển sang PostgreSQL/Neon và chạy trên
+> Vercel. Xem [PostgreSQL (Neon) + Vercel](postgres-neon.md). Tài liệu này chỉ còn
+> là lịch sử.
+
 # Hướng chuyển sang MongoDB Cloud
 
 Kế hoạch cho lần phát triển tiếp theo, **chưa kết nối/kiểm chứng cloud**. Local DB,

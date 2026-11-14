@@ -1,4 +1,4 @@
-const { Product } = require("../infrastructure/models");
+const repo = require("../infrastructure/repository");
 const { entity } = require("../infrastructure/transaction");
 const { fail, quantities, valuation } = require("../domain/policy");
 const { movement, getProduct } = require("./inventory-shared");
@@ -11,20 +11,8 @@ const productDTO = (p) => ({
   physicalStock: p.onHand ?? null,
   needsMigration: p.inventoryVersion !== 1,
 });
-async function createProduct(input, actor, session) {
-  const p = (
-    await Product.create(
-      [
-        {
-          ...input,
-          onHand: input.openingStock,
-          reserved: 0,
-          inventoryVersion: 1,
-        },
-      ],
-      { session },
-    )
-  )[0];
+async function createProduct(input, actor, tx) {
+  const p = await repo.createProduct(tx, input);
   await movement(
     {
       productId: p.id,
@@ -34,23 +22,22 @@ async function createProduct(input, actor, session) {
       effectiveAt: new Date(),
     },
     actor,
-    session,
+    tx,
   );
   return productDTO(p);
 }
-async function updateProduct(id, input, session) {
-  const p = await getProduct(id, session);
+async function updateProduct(id, input, tx) {
+  const p = await getProduct(id, tx);
   Object.assign(p, input);
-  await p.save({ session });
-  return productDTO(p);
+  return productDTO(await repo.saveProduct(tx, p));
 }
-async function adjustProduct(id, input, actor, session) {
-  const p = await getProduct(id, session);
+async function adjustProduct(id, input, actor, tx) {
+  const p = await getProduct(id, tx);
   const available = p.onHand - p.damagedOnHand - p.reserved;
   if (input.delta < -available)
     fail(409, "RESERVED_STOCK", "Điều chỉnh vượt hàng khả dụng");
   p.onHand += input.delta;
-  await p.save({ session });
+  const saved = await repo.saveProduct(tx, p);
   await movement(
     {
       productId: p.id,
@@ -60,12 +47,12 @@ async function adjustProduct(id, input, actor, session) {
       effectiveAt: new Date(),
     },
     actor,
-    session,
+    tx,
   );
-  return productDTO(p);
+  return productDTO(saved);
 }
-async function warehouseActivity(id, input, actor, session) {
-  const p = await getProduct(id, session);
+async function warehouseActivity(id, input, actor, tx) {
+  const p = await getProduct(id, tx);
   if (
     input.damaged + input.giftGood > p.onHand - p.damagedOnHand - p.reserved ||
     input.giftDamaged > p.damagedOnHand + input.damaged
@@ -73,7 +60,7 @@ async function warehouseActivity(id, input, actor, session) {
     fail(409, "INSUFFICIENT_STOCK", "Không đủ hàng khả dụng/hư");
   p.onHand -= input.giftGood + input.giftDamaged;
   p.damagedOnHand += input.damaged - input.giftDamaged;
-  await p.save({ session });
+  const saved = await repo.saveProduct(tx, p);
   await movement(
     {
       productId: p.id,
@@ -87,9 +74,9 @@ async function warehouseActivity(id, input, actor, session) {
       effectiveAt: new Date(),
     },
     actor,
-    session,
+    tx,
   );
-  return productDTO(p);
+  return productDTO(saved);
 }
 
 module.exports = {

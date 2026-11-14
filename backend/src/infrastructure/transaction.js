@@ -1,5 +1,6 @@
 const { createHash } = require("node:crypto");
-const { mongoose, Command, Audit } = require("./models");
+const { withTransaction } = require("./db");
+const repo = require("./repository");
 const { fail } = require("../domain/policy");
 const dto = (doc) => JSON.parse(JSON.stringify(doc));
 function canonical(value) {
@@ -12,12 +13,6 @@ function canonical(value) {
     );
   return value;
 }
-const transactionOptions = {
-  readConcern: { level: "snapshot" },
-  writeConcern: { w: "majority", j: true },
-  readPreference: "primary",
-  maxCommitTimeMS: 10000,
-};
 async function command(actor, operation, key, payload, execute) {
   if (!/^[\w-]{8,128}$/.test(key || ""))
     fail(400, "IDEMPOTENCY_REQUIRED", "Cần Idempotency-Key từ 8 đến 128 ký tự");
@@ -28,58 +23,42 @@ async function command(actor, operation, key, payload, execute) {
     .update(JSON.stringify(canonical(payload)))
     .digest("hex");
   const replay = (stored) => {
-    if (stored.requestHash !== requestHash)
+    if (stored.request_hash !== requestHash)
       fail(409, "IDEMPOTENCY_CONFLICT", "Key đã dùng với dữ liệu khác");
     return stored.result;
   };
-  try {
-    return await mongoose.connection.transaction(async (session) => {
-      const prior = await Command.findById(commandId).session(session).lean();
-      if (prior) return replay(prior);
-      await Command.create([{ _id: commandId, requestHash }], { session });
-      const result = dto(await execute(session));
-      await Audit.create(
-        [
-          {
-            actorId: actor.id,
-            action: operation,
-            sourceId: result.id || commandId,
-            reason: payload.reason,
-            after: result,
-          },
-        ],
-        { session },
-      );
-      await Command.updateOne(
-        { _id: commandId },
-        { $set: { result } },
-        { session },
-      );
-      return result;
-    }, transactionOptions);
-  } catch (error) {
-    if (error.code === 11000) {
-      const stored = await Command.findById(commandId).lean();
-      if (stored) return replay(stored);
-    }
-    throw error;
-  }
+  return withTransaction(async (tx) => {
+    const prior = await repo.getCommand(tx, commandId);
+    if (prior) return replay(prior);
+    const claimed = await repo.claimCommand(tx, {
+      id: commandId,
+      requestHash,
+    });
+    if (!claimed) return replay(await repo.getCommand(tx, commandId));
+    const result = dto(await execute(tx));
+    await repo.insertAudit(tx, {
+      actorId: actor.id,
+      action: operation,
+      sourceId: result.id || commandId,
+      reason: payload.reason,
+      after: result,
+    });
+    await repo.saveCommandResult(tx, commandId, result);
+    return result;
+  });
 }
 async function snapshot(execute) {
-  return mongoose.connection.transaction(execute, transactionOptions);
+  return withTransaction(execute, { readOnly: true });
 }
 function entity(doc) {
   if (!doc) return null;
-  const data = dto(doc);
-  return {
-    ...data,
-    id: String(data._id),
-    _id: undefined,
-    __v: undefined,
-    password: undefined,
-    tokenVersion: undefined,
-    inventoryRevision: undefined,
-    ...(data.role ? { active: data.active !== false } : {}),
-  };
+  const data = { ...doc };
+  delete data.password;
+  delete data.tokenVersion;
+  delete data.inventoryRevision;
+  delete data._id;
+  delete data.__v;
+  if (data.role) data.active = data.active !== false;
+  return data;
 }
-module.exports = { command, snapshot, entity, transactionOptions };
+module.exports = { command, snapshot, entity };

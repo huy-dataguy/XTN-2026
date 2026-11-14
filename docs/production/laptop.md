@@ -1,3 +1,7 @@
+> **Lỗi thời (2026-11-14):** backend đã chuyển sang PostgreSQL/Neon và chạy trên
+> Vercel. Xem [PostgreSQL (Neon) + Vercel](postgres-neon.md). Tài liệu này chỉ còn
+> là lịch sử.
+
 # Sử dụng thật trên laptop hiện tại
 
 **Đã dọn toàn bộ runtime/dữ liệu XTN theo yêu cầu.** Nội dung bên dưới mô tả bản

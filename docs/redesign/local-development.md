@@ -1,3 +1,6 @@
+> **Lỗi thời (2026-11-14):** phần Mongo local bên dưới không còn dùng.
+> Xem [PostgreSQL (Neon) + Vercel](../production/postgres-neon.md).
+
 # Chạy toàn dự án với MongoDB local
 
 **Trạng thái 2026-10-10:** runtime, dữ liệu, backup và credentials local đã xóa.

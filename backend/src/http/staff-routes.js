@@ -1,4 +1,5 @@
-const m = require("../infrastructure/models");
+const repo = require("../infrastructure/repository");
+const { getPool } = require("../infrastructure/db");
 const { snapshot, entity } = require("../infrastructure/transaction");
 const p = require("../domain/policy");
 const s = require("./schemas");
@@ -6,23 +7,30 @@ const { routerKit } = require("./router-kit");
 const bcrypt = require("bcryptjs");
 function staffRoutes() {
   const { router, admin, mutate, list } = routerKit();
-  router.get("/users", admin, list(m.User, {}));
+  router.get(
+    "/users",
+    admin,
+    list((req, { limit, offset }) =>
+      repo.listUsers(getPool(), { limit, offset }),
+    ),
+  );
   router.post(
     "/users",
     admin,
-    mutate("user.create", s.user, async (req, input, session) => {
-      if (await m.User.exists({ username: input.username }).session(session))
+    mutate("user.create", s.user, async (req, input, tx) => {
+      if (await repo.usernameExists(tx, input.username))
         p.fail(409, "DUPLICATE_USERNAME", "Tên đăng nhập đã tồn tại");
-      await m.Command.create([{ _id: `username:${input.username}` }], {
-        session,
+      const claimed = await repo.claimCommand(tx, {
+        id: `username:${input.username}`,
+        requestHash: null,
       });
+      if (!claimed)
+        p.fail(409, "DUPLICATE_USERNAME", "Tên đăng nhập đã tồn tại");
       return entity(
-        (
-          await m.User.create(
-            [{ ...input, password: await bcrypt.hash(input.password, 12) }],
-            { session },
-          )
-        )[0],
+        await repo.createUser(tx, {
+          ...input,
+          password: await bcrypt.hash(input.password, 12),
+        }),
       );
     }),
   );
@@ -38,16 +46,25 @@ function staffRoutes() {
           active: p.z.boolean().optional(),
         })
         .strict(),
-      async (req, input, session) => {
+      async (req, input, tx) => {
         if (req.params.id === req.actor.id && input.active === false)
           p.fail(409, "SELF_DISABLE", "Không tự khóa tài khoản đang dùng");
-        const user = await m.User.findById(req.params.id).session(session);
+        const user = await repo.getUserForUpdate(tx, req.params.id);
         if (!user) p.fail(404, "NOT_FOUND", "Không có tài khoản");
-        Object.assign(user, input);
-        if (input.active !== undefined)
+        if (input.name !== undefined) user.name = input.name;
+        if (input.group !== undefined) user.group = input.group;
+        if (input.active !== undefined) {
+          user.active = input.active;
           user.tokenVersion = (user.tokenVersion || 0) + 1;
-        await user.save({ session });
-        return entity(user);
+        }
+        return entity(
+          await repo.updateUser(tx, user.id, {
+            name: user.name,
+            group: user.group,
+            active: user.active,
+            tokenVersion: user.tokenVersion,
+          }),
+        );
       },
     ),
   );
@@ -57,39 +74,39 @@ function staffRoutes() {
     mutate(
       "user.password",
       p.z.object({ password: s.password }).strict(),
-      async (req, input, session) => {
-        const user = await m.User.findById(req.params.id)
-          .select("+password")
-          .session(session);
+      async (req, input, tx) => {
+        const user = await repo.getUserForUpdate(tx, req.params.id);
         if (!user) p.fail(404, "NOT_FOUND", "Không có tài khoản");
-        user.password = await bcrypt.hash(input.password, 12);
-        user.tokenVersion = (user.tokenVersion || 0) + 1;
-        await user.save({ session });
+        await repo.updateUser(tx, user.id, {
+          password: await bcrypt.hash(input.password, 12),
+          tokenVersion: (user.tokenVersion || 0) + 1,
+        });
         return { id: user.id, ok: true };
       },
     ),
   );
-  router.get("/tasks", admin, list(m.Task, { active: { $ne: false } }));
+  router.get(
+    "/tasks",
+    admin,
+    list((req, { limit, offset }) =>
+      repo.listTasks(getPool(), { limit, offset }),
+    ),
+  );
   router.post(
     "/tasks",
     admin,
-    mutate("task.create", s.task, async (req, input, session) => {
-      if (
-        input.assigneeId &&
-        !(await m.User.exists({
-          _id: input.assigneeId,
-          role: "ADMIN",
-          active: { $ne: false },
-        }).session(session))
-      )
-        p.fail(400, "INVALID_ASSIGNEE", "Người nhận việc phải là quản trị");
+    mutate("task.create", s.task, async (req, input, tx) => {
+      if (input.assigneeId) {
+        const assignee = await repo.getUserById(tx, input.assigneeId);
+        if (!assignee || assignee.role !== "ADMIN" || assignee.active === false)
+          p.fail(400, "INVALID_ASSIGNEE", "Người nhận việc phải là quản trị");
+      }
       return entity(
-        (
-          await m.Task.create(
-            [{ ...input, assignee: input.assigneeId, creator: req.actor.id }],
-            { session },
-          )
-        )[0],
+        await repo.createTask(tx, {
+          ...input,
+          assignee: input.assigneeId,
+          creator: req.actor.id,
+        }),
       );
     }),
   );
@@ -104,18 +121,20 @@ function staffRoutes() {
           active: p.z.boolean().optional(),
         })
         .strict(),
-      async (req, input, session) => {
-        const task = await m.Task.findByIdAndUpdate(
-          req.params.id,
-          { $set: input },
-          { session, returnDocument: "after", runValidators: true },
-        );
+      async (req, input, tx) => {
+        const task = await repo.updateTask(tx, req.params.id, input);
         if (!task) p.fail(404, "NOT_FOUND", "Không có công việc");
         return entity(task);
       },
     ),
   );
-  router.get("/tags", admin, list(m.Tag, { active: { $ne: false } }));
+  router.get(
+    "/tags",
+    admin,
+    list((req, { limit, offset }) =>
+      repo.listTags(getPool(), { limit, offset }),
+    ),
+  );
   router.post(
     "/tags",
     admin,
@@ -138,8 +157,7 @@ function staffRoutes() {
             .default("green"),
         })
         .strict(),
-      async (req, input, session) =>
-        entity((await m.Tag.create([input], { session }))[0]),
+      async (req, input, tx) => entity(await repo.createTag(tx, input)),
     ),
   );
   router.put(
@@ -150,34 +168,51 @@ function staffRoutes() {
       p.z
         .object({ name: p.text.optional(), active: p.z.boolean().optional() })
         .strict(),
-      async (req, input, session) => {
-        const tag = await m.Tag.findByIdAndUpdate(
-          req.params.id,
-          { $set: input },
-          { session, returnDocument: "after", runValidators: true },
-        );
+      async (req, input, tx) => {
+        const tag = await repo.updateTag(tx, req.params.id, input);
         if (!tag) p.fail(404, "NOT_FOUND", "Không có nhãn");
         return entity(tag);
       },
     ),
   );
+  router.get(
+    "/groups",
+    admin,
+    list((req, { limit, offset }) =>
+      repo.listGroups(getPool(), { limit, offset }),
+    ),
+  );
+  router.post(
+    "/groups",
+    admin,
+    mutate(
+      "group.create",
+      s.group,
+      async (req, input, tx) => entity(await repo.createGroup(tx, input)),
+    ),
+  );
+  router.put(
+    "/groups/:id",
+    admin,
+    mutate(
+      "group.update",
+      p.z
+        .object({ name: p.text.optional(), active: p.z.boolean().optional() })
+        .strict(),
+      async (req, input, tx) => {
+        const group = await repo.updateGroup(tx, req.params.id, input);
+        if (!group) p.fail(404, "NOT_FOUND", "Không có nhóm");
+        return entity(group);
+      },
+    ),
+  );
   router.get("/cash/summary", admin, async (req, res) =>
     res.json(
-      await snapshot(async (session) => {
-        let cashIn = 0,
-          cashOut = 0;
-        for await (const value of m.Statement.find({
-          voided: { $ne: true },
-          ...(req.query.tagId ? { tags: p.parse(p.id, req.query.tagId) } : {}),
-        })
-          .select("type amount")
-          .session(session)
-          .lean()
-          .cursor({ batchSize: 1000 })) {
-          if (value.type === "IN") cashIn = p.safeMoney(cashIn + value.amount);
-          if (value.type === "OUT")
-            cashOut = p.safeMoney(cashOut + value.amount);
-        }
+      await snapshot(async (tx) => {
+        const tagId = req.query.tagId
+          ? p.parse(p.id, req.query.tagId)
+          : undefined;
+        const { cashIn, cashOut } = await repo.cashSummary(tx, tagId);
         return { cashIn, cashOut, netCashFlow: cashIn - cashOut };
       }),
     ),
@@ -185,10 +220,13 @@ function staffRoutes() {
   router.get(
     "/statements",
     admin,
-    list(m.Statement, (req) => ({
-      voided: { $ne: true },
-      ...(req.query.tagId ? { tags: p.parse(p.id, req.query.tagId) } : {}),
-    })),
+    list((req, { limit, offset }) =>
+      repo.listStatements(getPool(), {
+        tagId: req.query.tagId ? p.parse(p.id, req.query.tagId) : undefined,
+        limit,
+        offset,
+      }),
+    ),
   );
   router.post(
     "/statements",
@@ -206,26 +244,20 @@ function staffRoutes() {
           tags: p.z.array(p.id).max(20).default([]),
         })
         .strict(),
-      async (req, input, session) => {
+      async (req, input, tx) => {
         for (const tag of input.tags) {
-          if (
-            !(await m.Tag.exists({ _id: tag, active: { $ne: false } }).session(
-              session,
-            ))
-          )
+          if (!(await repo.activeTagExists(tx, tag)))
             p.fail(400, "INVALID_TAG", "Nhãn không hợp lệ");
         }
-        // Reference deterministic identity prevents duplicate imports even with a fresh key.
-        const duplicate = await m.Statement.findOne({
-          reference: input.reference,
-        }).session(session);
-        if (duplicate)
+        if (await repo.getStatementByReference(tx, input.reference))
           p.fail(409, "DUPLICATE_REFERENCE", "Mã giao dịch đã được ghi nhận");
-        // Serialize reference claims without schema/index changes using the command collection.
-        await m.Command.create([{ _id: `bank:${input.reference}` }], {
-          session,
+        const claimed = await repo.claimCommand(tx, {
+          id: `bank:${input.reference}`,
+          requestHash: null,
         });
-        return entity((await m.Statement.create([input], { session }))[0]);
+        if (!claimed)
+          p.fail(409, "DUPLICATE_REFERENCE", "Mã giao dịch đã được ghi nhận");
+        return entity(await repo.createStatement(tx, input));
       },
     ),
   );
@@ -235,19 +267,21 @@ function staffRoutes() {
     mutate(
       "cash.void",
       p.z.object({ reason: p.text }).strict(),
-      async (req, input, session) => {
-        const statement = await m.Statement.findOneAndUpdate(
-          { _id: req.params.id, voided: { $ne: true } },
-          { $set: { voided: true } },
-          { session, returnDocument: "after" },
-        );
+      async (req, input, tx) => {
+        const statement = await repo.voidStatement(tx, req.params.id);
         if (!statement)
           p.fail(409, "STATE_CONFLICT", "Giao dịch không còn hiệu lực");
         return entity(statement);
       },
     ),
   );
-  router.get("/audit", admin, list(m.Audit, {}));
+  router.get(
+    "/audit",
+    admin,
+    list((req, { limit, offset }) =>
+      repo.listAudit(getPool(), { limit, offset }),
+    ),
+  );
 
   return router;
 }

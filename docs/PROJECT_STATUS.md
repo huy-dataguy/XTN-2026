@@ -1,5 +1,11 @@
 # Trạng thái và bàn giao XTN
 
+Cập nhật 2026-11-14: backend đã chuyển sang **PostgreSQL (Neon)** và **đang chạy
+thật** trên Vercel: API https://xtn-api.vercel.app, web
+https://volunteer-vovinam-hcmute.vercel.app. Không còn dùng MongoDB/Mongoose.
+Xem [PostgreSQL (Neon) + Vercel](production/postgres-neon.md). Phần lịch sử
+Mongo bên dưới giữ làm bằng chứng của snapshot trước khi chuyển đổi.
+
 Cập nhật 2026-10-10. Nhánh chuẩn **main**. Người dùng yêu cầu dọn laptop, xóa dữ
 liệu XTN và lưu source để sau này clone lại. Dự án hiện **không chạy**; không còn
 DB local, volume/chứng chỉ, backup, secrets, admin credential hoặc lịch backup/
@@ -7,8 +13,9 @@ health của dự án. Giữ source và bằng chứng đã commit. Xem [cleanup
 
 ## Đã hoàn thiện và kiểm chứng
 
-- Backend domain/application/persistence/HTTP; Express `/api/v1`, Mongoose
-  transaction, Zod; frontend React 19/TypeScript/TanStack Query/Vite.
+- Backend domain/application/persistence/HTTP; Express `/api/v1`, PostgreSQL
+  transaction + advisory write lock, Zod; frontend React 19/TypeScript/TanStack
+  Query/Vite.
 - Đặt/đổi/hủy đơn giữ hàng nguyên tử; nhận một phần/nhiều đợt; lô snapshot
   giá bán/giá vốn. Bán, hư, tặng hàng tốt/hư; kiểm tra sở hữu/lịch sử chặn tồn âm.
 - Nhiều báo cáo delta mỗi tuần, duyệt và correction đảo/thay thế; audit,
@@ -46,10 +53,11 @@ cleanup xóa cả backup local nên không có dữ liệu đó để tự phụ
 nộp thứ Hai 23:59, KPI doanh thu; quản trị có thể gia hạn. Đổi chính sách cần sửa
 hợp đồng và kiểm chứng số liệu, không sửa rải rác UI.
 
-Ưu tiên tiếp theo là [MongoDB Cloud](production/mongodb-cloud.md): cấu hình URI/
-secrets và deployment API/web không phụ thuộc Mongo local; explicit index/admin
-bootstrap, kiểm tra transaction/workflow/backup/restore/tải trên cloud thật.
-Chưa thực hiện những việc này. Không cần đổi domain model chỉ để đổi Mongo host.
+Cloud hiện tại: PostgreSQL Neon + API/web Vercel, schema và admin đã khởi tạo.
+Việc tiếp theo là backup/restore cloud thật, theo dõi lỗi serverless, kiểm chứng
+tải trên Neon và nhập dữ liệu cũ nếu cần (chưa chuyển tự động). Xem
+[PostgreSQL (Neon) + Vercel](production/postgres-neon.md). Không dùng
+[Kế hoạch MongoDB Cloud](production/mongodb-cloud.md) đã lỗi thời.
 
 ## Clone và tái dựng
 
@@ -62,35 +70,33 @@ npm ci --prefix backend
 npm ci --prefix frontend
 ```
 
-Bản laptop với DB mới, chỉ dựng khi cần:
+Bản laptop cũ (Mongo) chỉ còn là lịch sử, không dùng nữa. Dựng lại cloud:
 
 ```bash
-python3 scripts/prepare-production.py --laptop
-bash scripts/production.sh init
-# http://localhost:8080; credential mới: .local/production/admin-credentials.json.
-bash scripts/production.sh stop
-# Các lần sau: bash scripts/production.sh up
+cd backend && npm ci
+DATABASE_URL=... npm run migrate
+BOOTSTRAP_ADMIN=true ADMIN_USERNAME=... ADMIN_PASSWORD=... npm run bootstrap:admin
+vercel --prod --yes   # API
+cd .. && vercel --prod --yes   # web (Root Directory = frontend)
 ```
 
-Không có tự khởi động. Không chạy install-laptop-timers.py nếu chưa cần lịch;
-không dùng fixture/evidence làm dữ liệu thật.
+Xem [PostgreSQL (Neon) + Vercel](production/postgres-neon.md) cho biến môi trường
+và lệnh test. Không commit secret/URI có credential; không dùng fixture/evidence
+làm dữ liệu thật.
 
-Kiểm chứng trên clone sạch, DB/port riêng:
+Kiểm chứng hiện tại:
 
 ```bash
-bash scripts/start-test-mongo.sh
-cd frontend
-npx playwright install --with-deps chromium firefox webkit
-cd ..
-python3 scripts/verify-full.py
-python3 scripts/verify-responsive.py
-python3 scripts/verify-production.py
+cd backend
+npm test
+TEST_DATABASE_URL=postgresql://.../xtn_test?sslmode=require npm run test:integration
+cd ../frontend && npm run build
 ```
 
-Full-check dùng Mongo 27028, API 5001, preview 5174; election sau browser.
-Responsive dùng fixture vừa tạo. Production verifier tạo hai sandbox, từ chối
-ghi đè sandbox đã tồn tại. Không chạy scale cùng election; dừng test containers
-khi xong. Giữ failure evidence khi điều tra, báo đúng phạm vi kiểm tra.
+Test tích hợp Postgres chạy trên database tên `xtn_test*`, truncate bảng trước
+mỗi lần và đã pass 8 nhóm (auth, idempotency, tồn kho đồng thời, nhận hàng, báo
+cáo/sửa, chốt/mở kỳ, thu chi). Các script `verify-*.py` và Mongo local là lịch
+sử, không còn dùng.
 
 Các hướng dẫn runtime cũ mô tả lần chạy trước. laptop-operations.json,
 laptop-autostart.json, credential links và ảnh chụp là lịch sử; ưu tiên trạng thái

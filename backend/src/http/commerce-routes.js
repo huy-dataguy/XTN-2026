@@ -1,5 +1,6 @@
-const m = require("../infrastructure/models");
-const { snapshot, entity } = require("../infrastructure/transaction");
+const repo = require("../infrastructure/repository");
+const { getPool } = require("../infrastructure/db");
+const { snapshot } = require("../infrastructure/transaction");
 const p = require("../domain/policy");
 const s = require("./schemas");
 const { routerKit } = require("./router-kit");
@@ -13,26 +14,31 @@ function commerceRoutes() {
   const { router, admin, mutate, list } = routerKit();
   router.get("/migration/status", admin, async (req, res) =>
     res.json({
-      products: await m.Product.countDocuments({
-        inventoryVersion: { $ne: 1 },
-      }),
-      orders: await m.Order.countDocuments({ schemaVersion: { $ne: 1 } }),
-      reports: await m.Report.countDocuments({ schemaVersion: { $ne: 1 } }),
+      products: await repo.countLegacyProducts(getPool()),
+      orders: await repo.countLegacyOrders(getPool()),
+      reports: await repo.countLegacyReports(getPool()),
     }),
   );
-  router.get("/products", list(m.Product, {}, commerce.productDTO));
+  router.get(
+    "/products",
+    list(
+      (req, { limit, offset }) =>
+        repo.listProducts(getPool(), { limit, offset }),
+      commerce.productDTO,
+    ),
+  );
   router.post(
     "/products",
     admin,
-    mutate("product.create", s.product, (req, input, session) =>
-      commerce.createProduct(input, req.actor, session),
+    mutate("product.create", s.product, (req, input, tx) =>
+      commerce.createProduct(input, req.actor, tx),
     ),
   );
   router.put(
     "/products/:id",
     admin,
-    mutate("product.update", s.productUpdate, (req, input, session) =>
-      commerce.updateProduct(req.params.id, input, session),
+    mutate("product.update", s.productUpdate, (req, input, tx) =>
+      commerce.updateProduct(req.params.id, input, tx),
     ),
   );
   router.post(
@@ -51,83 +57,89 @@ function commerceRoutes() {
           reason: p.text,
         })
         .strict(),
-      (req, input, session) =>
-        commerce.adjustProduct(req.params.id, input, req.actor, session),
+      (req, input, tx) =>
+        commerce.adjustProduct(req.params.id, input, req.actor, tx),
     ),
   );
   router.post(
     "/products/:id/activity",
     admin,
-    mutate("warehouse.activity", s.warehouse, (req, input, session) =>
-      commerce.warehouseActivity(req.params.id, input, req.actor, session),
+    mutate("warehouse.activity", s.warehouse, (req, input, tx) =>
+      commerce.warehouseActivity(req.params.id, input, req.actor, tx),
     ),
   );
   router.get(
     "/orders",
-    list(m.Order, (req) => ({
-      ...commerce.scoped(req.actor),
-      schemaVersion: 1,
-    })),
+    list((req, { limit, offset }) =>
+      repo.listOrders(getPool(), {
+        memberId: commerce.scoped(req.actor),
+        limit,
+        offset,
+      }),
+    ),
   );
   router.post(
     "/orders",
-    mutate("order.create", s.order, (req, input, session) => {
+    mutate("order.create", s.order, (req, input, tx) => {
       if (req.actor.role !== "DISTRIBUTOR")
         p.fail(403, "MEMBER_ONLY", "Chỉ thành viên đặt yêu cầu cấp hàng");
-      return commerce.createOrder(input, req.actor, session);
+      return commerce.createOrder(input, req.actor, tx);
     }),
   );
   router.put(
     "/orders/:id",
-    mutate("order.amend", s.orderUpdate, (req, input, session) =>
-      commerce.amendOrder(req.params.id, input, req.actor, session),
+    mutate("order.amend", s.orderUpdate, (req, input, tx) =>
+      commerce.amendOrder(req.params.id, input, req.actor, tx),
     ),
   );
   router.put(
     "/orders/:id/status",
-    mutate("order.status", s.status, (req, input, session) =>
-      commerce.orderStatus(req.params.id, input, req.actor, session),
+    mutate("order.status", s.status, (req, input, tx) =>
+      commerce.orderStatus(req.params.id, input, req.actor, tx),
     ),
   );
   router.post(
     "/orders/:id/receipts",
-    mutate("order.receive", s.receipt, (req, input, session) =>
-      commerce.receiveOrder(req.params.id, input, req.actor, session),
+    mutate("order.receive", s.receipt, (req, input, tx) =>
+      commerce.receiveOrder(req.params.id, input, req.actor, tx),
     ),
   );
   router.get(
     "/reports",
-    list(m.Report, (req) => ({
-      ...commerce.scoped(req.actor),
-      schemaVersion: 1,
-    })),
+    list((req, { limit, offset }) =>
+      repo.listReports(getPool(), {
+        memberId: commerce.scoped(req.actor),
+        limit,
+        offset,
+      }),
+    ),
   );
   router.post(
     "/reports",
-    mutate("report.create", s.reportInput, (req, input, session) => {
+    mutate("report.create", s.reportInput, (req, input, tx) => {
       if (req.actor.role !== "DISTRIBUTOR")
         p.fail(403, "MEMBER_ONLY", "Chỉ thành viên gửi báo cáo");
-      return commerce.createReport(input, req.actor, session);
+      return commerce.createReport(input, req.actor, tx);
     }),
   );
   router.put(
     "/reports/:id",
-    mutate("report.amend", s.reportUpdate, (req, input, session) =>
-      commerce.amendReport(req.params.id, input, req.actor, session),
+    mutate("report.amend", s.reportUpdate, (req, input, tx) =>
+      commerce.amendReport(req.params.id, input, req.actor, tx),
     ),
   );
   router.put(
     "/reports/:id/status",
     admin,
-    mutate("report.status", s.reportStatus, (req, input, session) =>
-      commerce.reportStatus(req.params.id, input, req.actor, session),
+    mutate("report.status", s.reportStatus, (req, input, tx) =>
+      commerce.reportStatus(req.params.id, input, req.actor, tx),
     ),
   );
   router.post(
     "/reports/:id/corrections",
     admin,
-    mutate("report.correct", s.correction, (req, input, session) =>
-      commerce.correctReport(req.params.id, input, req.actor, session),
+    mutate("report.correct", s.correction, (req, input, tx) =>
+      commerce.correctReport(req.params.id, input, req.actor, tx),
     ),
   );
   router.get("/inventory", async (req, res) => {
@@ -137,7 +149,7 @@ function commerceRoutes() {
       p.owner(req.actor, memberId);
       actor = { ...actor, id: memberId, role: "DISTRIBUTOR" };
     }
-    res.json(await snapshot((session) => analytics.stock(actor, session)));
+    res.json(await snapshot((tx) => analytics.stock(actor, tx)));
   });
   router.get("/analytics/weekly", async (req, res) => {
     const input = p.parse(
@@ -152,8 +164,8 @@ function commerceRoutes() {
       req.query,
     );
     res.json(
-      await snapshot((session) =>
-        analytics.weekly(req.actor, input.from, input.to, session, {
+      await snapshot((tx) =>
+        analytics.weekly(req.actor, input.from, input.to, tx, {
           limit: input.limit,
           offset: input.offset,
         }),

@@ -1,12 +1,5 @@
-const {
-  User,
-  Movement,
-  MemberPeriod,
-  Period,
-  Report,
-  Product,
-  Receipt,
-} = require("../infrastructure/models");
+const repo = require("../infrastructure/repository");
+const { many } = require("../infrastructure/db");
 const { weeks, bounds, safeMoney } = require("../domain/policy");
 const { entity } = require("../infrastructure/transaction");
 function inventoryAt(movements, cutoff) {
@@ -97,7 +90,7 @@ async function weekly(
   actor,
   from,
   to,
-  session,
+  tx,
   { limit = 50, offset = 0 } = {},
 ) {
   let previous = performance.now();
@@ -117,167 +110,127 @@ async function weekly(
   const keys = weeks(from, to),
     first = bounds(from).start,
     last = bounds(to).end;
-  const members = await User.find({
-    role: "DISTRIBUTOR",
-    ...(actor.role === "ADMIN" ? {} : { _id: actor.id }),
-    createdAt: { $lt: last },
-  })
-    .select("_id name group createdAt")
-    .sort({ createdAt: 1, _id: 1 })
-    .session(session)
-    .lean();
+  const members = await repo.listMembers(tx, {
+    createdBefore: last,
+    memberId: actor.role === "ADMIN" ? undefined : actor.id,
+  });
   trace("members");
-  const ids = members.map((m) => m._id),
+  const ids = members.map((m) => m.id),
     page = members.slice(offset, offset + limit),
-    selected = new Set(page.map((m) => String(m._id))),
-    pageIds = page.map((m) => m._id);
-  const states = await MemberPeriod.find({
-    memberId: { $in: ids },
-    periodId: { $in: keys },
-  })
-    .select("memberId periodId targetRevenue complete extensionUntil group")
-    .session(session)
-    .lean();
+    selected = new Set(page.map((m) => m.id)),
+    pageIds = page.map((m) => m.id);
+  const states = await repo.getMemberPeriods(tx, { memberIds: ids, keys });
   const stateMap = new Map(
     states.map((s) => [`${s.memberId}:${s.periodId}`, s]),
   );
-  const periods = await Period.find({ _id: { $in: keys } })
-      .session(session)
-      .lean(),
-    periodMap = new Map(periods.map((p) => [p._id, p]));
+  const periods = await repo.getPeriods(tx, keys),
+    periodMap = new Map(periods.map((p) => [p.id, p]));
   trace("states");
-  const liveReports = new Set(),
-    submissions = new Map();
-  for await (const report of Report.find({
-    memberId: { $in: ids },
-    periodId: { $in: keys },
-    schemaVersion: 1,
-  })
-    .select("_id memberId periodId status submittedAt")
-    .session(session)
-    .lean()
-    .cursor({ batchSize: 1000 })) {
-    const key = `${report.memberId}:${report.periodId}`,
-      stats = submissions.get(key) || {
-        count: 0,
-        pending: 0,
-        latest: -Infinity,
-      };
-    if (report.status === "APPROVED") liveReports.add(String(report._id));
-    if (report.status === "PENDING") stats.pending++;
-    if (report.status !== "SUPERSEDED") {
-      stats.count++;
-      stats.latest = Math.max(
-        stats.latest,
-        Number.isFinite(+report.submittedAt) ? +report.submittedAt : Infinity,
-      );
-    }
-    submissions.set(key, stats);
-  }
+  const headers = await many(
+    tx,
+    `SELECT member_id, period_id,
+       count(*) FILTER (WHERE status <> 'SUPERSEDED')::int AS count,
+       count(*) FILTER (WHERE status = 'PENDING')::int AS pending,
+       max(submitted_at) FILTER (WHERE status <> 'SUPERSEDED') AS latest
+     FROM reports WHERE member_id = ANY($1) AND period_id = ANY($2) AND schema_version = 1
+     GROUP BY member_id, period_id`,
+    [ids, keys],
+  );
+  const submissions = new Map(
+    headers.map((row) => [
+      `${row.member_id}:${row.period_id}`,
+      {
+        count: row.count,
+        pending: row.pending,
+        latest: row.latest
+          ? +new Date(row.latest)
+          : row.count
+            ? 0
+            : -Infinity,
+      },
+    ]),
+  );
+  const liveReports = (
+    await many(
+      tx,
+      `SELECT id FROM reports WHERE member_id = ANY($1) AND period_id = ANY($2)
+         AND schema_version = 1 AND status = 'APPROVED'`,
+      [ids, keys],
+    )
+  ).map((row) => row.id);
   trace("report-headers");
   const opening = new Map(),
     deltas = new Map(),
     financial = new Map(),
     received = new Map();
-  // Aggregate inside the same snapshot: raw movement volume never crosses HTTP/Node.
-  for await (const group of Movement.aggregate([
-    { $match: { memberId: { $in: pageIds }, effectiveAt: { $lt: first } } },
-    {
-      $group: {
-        _id: "$memberId",
-        sellableDelta: { $sum: "$sellableDelta" },
-        damagedDelta: { $sum: "$damagedDelta" },
-      },
-    },
-  ])
-    .session(session)
-    .cursor({ batchSize: 1000 })) {
+  for (const group of await many(
+    tx,
+    `SELECT member_id, sum(sellable_delta)::int AS sellable_delta,
+       sum(damaged_delta)::int AS damaged_delta
+     FROM movements WHERE member_id = ANY($1) AND effective_at < $2
+     GROUP BY member_id`,
+    [pageIds, first],
+  )) {
     const b = { sellable: 0, damaged: 0 };
-    addBalance(b, group);
-    opening.set(String(group._id), b);
+    addBalance(b, {
+      sellableDelta: group.sellable_delta,
+      damagedDelta: group.damaged_delta,
+    });
+    opening.set(group.member_id, b);
   }
   trace("opening");
-  const effectiveWeek = {
-    $dateToString: {
-      format: "%Y-%m-%d",
-      timezone: "Asia/Ho_Chi_Minh",
-      date: {
-        $dateTrunc: {
-          date: "$effectiveAt",
-          unit: "week",
-          startOfWeek: "monday",
-          timezone: "Asia/Ho_Chi_Minh",
-        },
-      },
-    },
-  };
-  for await (const group of Movement.aggregate([
-    {
-      $match: {
-        memberId: { $in: pageIds },
-        effectiveAt: { $gte: first, $lt: last },
-      },
-    },
-    {
-      $group: {
-        _id: { memberId: "$memberId", periodId: effectiveWeek },
-        sellableDelta: { $sum: "$sellableDelta" },
-        damagedDelta: { $sum: "$damagedDelta" },
-        received: {
-          $sum: { $cond: [{ $eq: ["$kind", "RECEIPT"] }, "$sellableDelta", 0] },
-        },
-      },
-    },
-  ])
-    .session(session)
-    .cursor({ batchSize: 1000 })) {
-    const key = `${group._id.memberId}:${group._id.periodId}`,
+  const weekExpr = `to_char(date_trunc('week', effective_at AT TIME ZONE 'Asia/Ho_Chi_Minh'), 'YYYY-MM-DD')`;
+  for (const group of await many(
+    tx,
+    `SELECT member_id, ${weekExpr} AS period_id,
+       sum(sellable_delta)::int AS sellable_delta,
+       sum(damaged_delta)::int AS damaged_delta,
+       coalesce(sum(CASE WHEN kind = 'RECEIPT' THEN sellable_delta ELSE 0 END), 0)::int AS received
+     FROM movements WHERE member_id = ANY($1) AND effective_at >= $2 AND effective_at < $3
+     GROUP BY member_id, ${weekExpr}`,
+    [pageIds, first, last],
+  )) {
+    const key = `${group.member_id}:${group.period_id}`,
       b = { sellable: 0, damaged: 0 };
-    addBalance(b, group);
+    addBalance(b, {
+      sellableDelta: group.sellable_delta,
+      damagedDelta: group.damaged_delta,
+    });
     deltas.set(key, b);
     received.set(key, safeMoney(group.received));
   }
   trace("inventory-range");
-  const missing = (field) => ({
-    $eq: [{ $ifNull: [`$${field}`, null] }, null],
-  });
-  const moneyGroup = {
-    _id: { memberId: "$memberId", periodId: "$periodId" },
-    ...Object.fromEntries(
-      metricFields.map((field) => [field, { $sum: `$${field}` }]),
-    ),
-  };
-  for (const field of ["cogs", "damageCost", "giftCost"])
-    moneyGroup[`${field}Missing`] = { $sum: { $cond: [missing(field), 1, 0] } };
-  moneyGroup.missingCostLines = {
-    $sum: {
-      $cond: [
-        { $or: [missing("cogs"), missing("damageCost"), missing("giftCost")] },
-        1,
-        0,
-      ],
-    },
-  };
-  for await (const group of Movement.aggregate([
-    {
-      $match: {
-        memberId: { $in: ids },
-        effectiveAt: { $gte: first, $lt: last },
-        periodId: { $in: keys },
-        kind: "DECLARATION",
-        sourceId: { $in: [...liveReports] },
-      },
-    },
-    { $group: moneyGroup },
-  ])
-    .session(session)
-    .cursor({ batchSize: 1000 })) {
+  for (const group of await many(
+    tx,
+    `SELECT member_id, period_id,
+       sum(revenue)::bigint AS revenue, sum(sold)::int AS sold,
+       sum(damaged)::int AS damaged, sum(gift_good)::int AS gift_good,
+       sum(gift_damaged)::int AS gift_damaged, sum(cogs)::bigint AS cogs,
+       sum(damage_cost)::bigint AS damage_cost, sum(gift_cost)::bigint AS gift_cost,
+       count(*) FILTER (WHERE cogs IS NULL)::int AS cogs_missing,
+       count(*) FILTER (WHERE damage_cost IS NULL)::int AS damage_cost_missing,
+       count(*) FILTER (WHERE gift_cost IS NULL)::int AS gift_cost_missing,
+       count(*) FILTER (WHERE cogs IS NULL OR damage_cost IS NULL OR gift_cost IS NULL)::int AS missing_cost_lines
+     FROM movements
+     WHERE member_id = ANY($1) AND effective_at >= $2 AND effective_at < $3
+       AND period_id = ANY($4) AND kind = 'DECLARATION' AND source_id = ANY($5)
+     GROUP BY member_id, period_id`,
+    [ids, first, last, keys, liveReports],
+  )) {
     const acc = accumulator();
-    for (const field of metricFields) acc.sums[field] = safeMoney(group[field]);
-    for (const field of ["cogs", "damageCost", "giftCost"])
-      if (group[`${field}Missing`]) acc.unknown.add(field);
-    acc.missingCostLines = group.missingCostLines;
-    financial.set(`${group._id.memberId}:${group._id.periodId}`, acc);
+    acc.sums.revenue = safeMoney(Number(group.revenue));
+    acc.sums.sold = group.sold;
+    acc.sums.damaged = group.damaged;
+    acc.sums.giftGood = group.gift_good;
+    acc.sums.giftDamaged = group.gift_damaged;
+    acc.sums.cogs = safeMoney(Number(group.cogs));
+    acc.sums.damageCost = safeMoney(Number(group.damage_cost));
+    acc.sums.giftCost = safeMoney(Number(group.gift_cost));
+    if (group.cogs_missing) acc.unknown.add("cogs");
+    if (group.damage_cost_missing) acc.unknown.add("damageCost");
+    if (group.gift_cost_missing) acc.unknown.add("giftCost");
+    acc.missingCostLines = group.missing_cost_lines;
+    financial.set(`${group.member_id}:${group.period_id}`, acc);
   }
   trace("financial-range");
   const rows = [],
@@ -293,7 +246,7 @@ async function weekly(
   let provisional = false;
   const calendar = keys.map((key) => ({ key, ...bounds(key) }));
   for (const member of members) {
-    const memberId = String(member._id),
+    const memberId = member.id,
       includeDetail = selected.has(memberId),
       balance = { ...(opening.get(memberId) || { sellable: 0, damaged: 0 }) },
       part = {
@@ -307,7 +260,7 @@ async function weekly(
         missingTargets: 0,
       };
     for (const { key, end, deadline: defaultDeadline } of calendar) {
-      if (+member.createdAt >= +end) continue;
+      if (+new Date(member.createdAt) >= +end) continue;
       const slot = `${memberId}:${key}`,
         state = stateMap.get(slot),
         period = periodMap.get(key),
@@ -319,7 +272,6 @@ async function weekly(
         summary = finishMetric(financial.get(slot) || accumulator()),
         target = state?.targetRevenue ?? null,
         complete = !!state?.complete && stats.pending === 0;
-      // Organization scope is independent of the displayed member page.
       totals.revenue = safeMoney(totals.revenue + summary.revenue);
       totals.sold = safeMoney(totals.sold + summary.sold);
       totals.targetRevenue = safeMoney(totals.targetRevenue + (target || 0));
@@ -394,15 +346,7 @@ async function weekly(
   trace("member-totals");
   const costs = accumulator();
   if (actor.role === "ADMIN")
-    for await (const move of Movement.find({
-      memberId: { $exists: false },
-      kind: "WAREHOUSE_ACTIVITY",
-      effectiveAt: { $gte: first, $lt: last },
-    })
-      .select(metricFields.join(" "))
-      .session(session)
-      .lean()
-      .cursor({ batchSize: 1000 }))
+    for (const move of await repo.listWarehouseCostMovements(tx, first, last))
       addMetric(costs, move);
   const warehouseCosts = finishMetric(costs);
   if (actor.role === "ADMIN")
@@ -439,10 +383,10 @@ async function weekly(
     },
   };
 }
-async function stock(actor, session) {
+async function stock(actor, tx) {
   if (actor.role === "ADMIN")
     return {
-      warehouse: (await Product.find().session(session).lean()).map((p) => ({
+      warehouse: (await repo.listProducts(tx)).map((p) => ({
         ...entity(p),
         sellable:
           p.inventoryVersion === 1 ? p.onHand - (p.damagedOnHand || 0) : null,
@@ -455,29 +399,29 @@ async function stock(actor, session) {
       })),
       lots: [],
     };
-  const lots = await Receipt.find({ memberId: actor.id })
-    .session(session)
-    .lean();
+  const lots = await repo.listReceiptsByMember(tx, actor.id);
   const balances = new Map(),
     cutoff = new Date(Date.now() + 1);
-  for await (const move of Movement.find({
-    memberId: actor.id,
-    effectiveAt: { $lt: cutoff },
-  })
-    .select("lotId sellableDelta damagedDelta")
-    .session(session)
-    .lean()
-    .cursor({ batchSize: 1000 })) {
-    const key = String(move.lotId),
-      b = balances.get(key) || { sellable: 0, damaged: 0 };
-    addBalance(b, move);
-    balances.set(key, b);
+  for (const move of await many(
+    tx,
+    `SELECT lot_id, sum(sellable_delta)::int AS sellable_delta,
+       sum(damaged_delta)::int AS damaged_delta
+     FROM movements WHERE member_id = $1 AND effective_at < $2
+     GROUP BY lot_id`,
+    [actor.id, cutoff],
+  )) {
+    const b = { sellable: 0, damaged: 0 };
+    addBalance(b, {
+      sellableDelta: move.sellable_delta,
+      damagedDelta: move.damaged_delta,
+    });
+    balances.set(String(move.lot_id), b);
   }
   return {
     warehouse: [],
     lots: lots.map((l) => ({
       ...entity(l),
-      ...balanceDTO(balances.get(String(l._id)) || { sellable: 0, damaged: 0 }),
+      ...balanceDTO(balances.get(String(l.id)) || { sellable: 0, damaged: 0 }),
     })),
   };
 }

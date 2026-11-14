@@ -91,6 +91,23 @@ const user = z
     password,
   })
   .strict();
+const group = z
+  .object({
+    name: text,
+    color: z
+      .enum([
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "purple",
+        "gray",
+        "orange",
+        "teal",
+      ])
+      .default("green"),
+  })
+  .strict();
 const task = z
   .object({
     title: text,
@@ -115,6 +132,7 @@ module.exports = {
   memberPeriod,
   warehouse,
   user,
+  group,
   task,
   version,
   items,

@@ -1,33 +1,17 @@
-const { Product, Movement } = require("../infrastructure/models");
+const repo = require("../infrastructure/repository");
 const { periodId, fail, inventoryReady } = require("../domain/policy");
-async function movement(data, actor, session) {
-  return (
-    await Movement.create(
-      [
-        {
-          sold: 0,
-          damaged: 0,
-          giftGood: 0,
-          giftDamaged: 0,
-          revenue: 0,
-          cogs: 0,
-          damageCost: 0,
-          giftCost: 0,
-          damagedDelta: 0,
-          ...data,
-          periodId: periodId(data.effectiveAt),
-          actorId: actor.id,
-        },
-      ],
-      { session },
-    )
-  )[0];
+async function movement(data, actor, tx) {
+  return repo.createMovement(tx, {
+    ...data,
+    periodId: periodId(data.effectiveAt),
+    actorId: actor.id,
+  });
 }
-async function getProduct(id, session) {
-  const p = await Product.findById(id).session(session);
-  if (!p) fail(404, "NOT_FOUND", "Không tìm thấy sản phẩm");
-  inventoryReady(p);
-  return p;
+async function getProduct(id, tx) {
+  const product = await repo.getProductForUpdate(tx, id);
+  if (!product) fail(404, "NOT_FOUND", "Không tìm thấy sản phẩm");
+  inventoryReady(product);
+  return product;
 }
 
 module.exports = { movement, getProduct };

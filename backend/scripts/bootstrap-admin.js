@@ -1,14 +1,8 @@
 require("dotenv").config({ quiet: true });
 const fs = require("node:fs");
 const bcrypt = require("bcryptjs");
-const {
-  mongoose,
-  User,
-  Command,
-  Audit,
-} = require("../src/infrastructure/models");
-const { transactionOptions } = require("../src/infrastructure/transaction");
-const { configuration } = require("../src/infrastructure/config");
+const { withTransaction, disconnect } = require("../src/infrastructure/db");
+const repo = require("../src/infrastructure/repository");
 const { parse } = require("../src/domain/policy");
 const { user } = require("../src/http/schemas");
 async function bootstrap() {
@@ -22,18 +16,15 @@ async function bootstrap() {
       : process.env.ADMIN_PASSWORD,
     role: "ADMIN",
   });
-  const config = configuration();
-  await mongoose.connect(config.mongoUri, { autoIndex: false });
-  if (
-    process.env.BOOTSTRAP_ALLOW_EXISTING === "true" &&
-    (await User.exists({}))
-  ) {
-    const existing = await User.findOne({
-      username: input.username,
-      role: "ADMIN",
-      active: { $ne: false },
-    }).select("+password");
-    if (!existing || !(await bcrypt.compare(input.password, existing.password)))
+  const count = await repo.countUsers(undefined);
+  if (process.env.BOOTSTRAP_ALLOW_EXISTING === "true" && count > 0) {
+    const existing = await repo.getUserByUsername(undefined, input.username);
+    if (
+      !existing ||
+      existing.role !== "ADMIN" ||
+      existing.active === false ||
+      !(await bcrypt.compare(input.password, existing.password))
+    )
       throw new Error(
         "Existing administrator does not match supplied credentials",
       );
@@ -41,23 +32,28 @@ async function bootstrap() {
     return;
   }
   const password = await bcrypt.hash(input.password, 12);
-  await mongoose.connection.transaction(async (session) => {
-    if (await User.exists({}).session(session))
+  await withTransaction(async (tx) => {
+    if ((await repo.countUsers(tx)) > 0)
       throw new Error(
         "Database already contains users. Use authenticated user management.",
       );
-    await Command.create([{ _id: "bootstrap-admin" }], { session });
-    const admin = (await User.create([{ ...input, password }], { session }))[0];
-    await Audit.create(
-      [{ actorId: admin.id, action: "admin.bootstrap", sourceId: admin.id }],
-      { session },
-    );
-  }, transactionOptions);
+    const claimed = await repo.claimCommand(tx, {
+      id: "bootstrap-admin",
+      requestHash: null,
+    });
+    if (!claimed) throw new Error("Bootstrap already claimed");
+    const admin = await repo.createUser(tx, { ...input, password });
+    await repo.insertAudit(tx, {
+      actorId: admin.id,
+      action: "admin.bootstrap",
+      sourceId: admin.id,
+    });
+  });
   console.log("Initial administrator created. No password is logged.");
 }
 bootstrap()
-  .catch((e) => {
-    console.error(e.message);
+  .catch((error) => {
+    console.error(error.message);
     process.exitCode = 1;
   })
-  .finally(() => mongoose.disconnect());
+  .finally(() => disconnect());

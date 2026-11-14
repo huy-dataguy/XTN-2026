@@ -1,150 +1,243 @@
 import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../shared/api";
-import type { Report, Page, Inventory, User, Activity } from "../shared/types";
+import type { Activity, Inventory, Page, Report, User } from "../shared/types";
 import {
   Badge,
-  Card,
+  Dialog,
+  EmptyState,
   ErrorNotice,
   Field,
-  monday,
-  date,
-  useWrite,
+  Icon,
   MutationStatus,
   PageControls,
-  useOffset,
-  nowLocal,
+  date,
   effective,
+  monday,
+  nowLocal,
+  reportStatus,
+  useOffset,
+  useWrite,
 } from "../shared/ui";
+
 export default function Reports({ user }: { user: User }) {
-  const [offset, setOffset] = useOffset(),
-    [editing, setEditing] = useState<Report | null>(null);
+  const [offset, setOffset] = useOffset();
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Report | null>(null);
   const query = useQuery({
-      queryKey: ["reports", offset],
-      queryFn: () => api<Page<Report>>(`/reports?offset=${offset}`),
-    }),
-    write = useWrite();
+    queryKey: ["reports", offset],
+    queryFn: () => api<Page<Report>>(`/reports?offset=${offset}`),
+  });
+  const write = useWrite();
+  const isAdmin = user.role === "ADMIN";
+
   return (
     <>
-      <div className="page-heading">
+      <header className="page-head">
         <div>
-          <span className="eyebrow">KHAI BÁO PHÁT SINH</span>
           <h1>Báo cáo bán hàng</h1>
-          <p className="muted">
-            Mỗi lần gửi ghi phần bán, hư, tặng mới. Ngày phát sinh quyết định
-            tuần thống kê.
-          </p>
+          <p>Khai báo phần bán, hư và tặng phát sinh theo tuần.</p>
         </div>
-      </div>
-      {(user.role === "DISTRIBUTOR" || editing) && (
-        <ReportForm
-          key={editing?.id || "new"}
-          editing={editing}
-          onDone={() => setEditing(null)}
+        {user.role === "DISTRIBUTOR" && !!query.data?.items.length && (
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => setCreating(true)}
+          >
+            <Icon name="plus" size={17} /> Gửi báo cáo
+          </button>
+        )}
+      </header>
+
+      {query.error && <ErrorNotice error={query.error} />}
+      {query.isPending && <p className="loading">Đang tải báo cáo…</p>}
+      {query.data && !query.data.items.length && (
+        <EmptyState
+          icon="reports"
+          title="Chưa có báo cáo"
+          description={
+            user.role === "DISTRIBUTOR"
+              ? "Gửi báo cáo sau khi đã nhận hàng và phát sinh bán, hư hoặc tặng."
+              : "Báo cáo của thành viên sẽ xuất hiện tại đây để duyệt."
+          }
+          action={
+            user.role === "DISTRIBUTOR" ? (
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => setCreating(true)}
+              >
+                Gửi báo cáo
+              </button>
+            ) : undefined
+          }
         />
       )}
-      <MutationStatus pending={write.isPending} error={write.error} />
-      {query.error && <ErrorNotice error={query.error} />}
-      {query.data?.items.map((report) => (
-        <Card key={report.id}>
-          <div className="split">
-            <div>
-              <h2>
-                {report.memberName} · Tuần {report.periodId}
-              </h2>
-              <p className="muted">
-                Nộp {date(report.submittedAt)}
-                {report.replacesId ? " · Bản điều chỉnh" : ""}
-              </p>
-            </div>
-            <Badge>{report.status}</Badge>
-          </div>
-          <div
-            className="table-wrap"
-            tabIndex={0}
-            role="region"
-            aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th>Ngày phát sinh</th>
-                  <th>Bán</th>
-                  <th>Hư mới</th>
-                  <th>Tặng tốt</th>
-                  <th>Tặng hư</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.lines.map((line, i) => (
-                  <tr key={i}>
-                    <td>{date(line.effectiveAt)}</td>
-                    <td>{line.sold}</td>
-                    <td>{line.damaged}</td>
-                    <td>{line.giftGood}</td>
-                    <td>{line.giftDamaged}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p>{report.notes}</p>
-          <div className="actions">
-            {report.status === "PENDING" && (
-              <>
-                <button onClick={() => setEditing(report)}>
-                  Sửa phần khai báo
-                </button>
-                {user.role === "ADMIN" && (
-                  <>
-                    <button
-                      disabled={write.isPending}
-                      onClick={() =>
-                        write.mutate({
-                          path: `/reports/${report.id}/status`,
-                          method: "PUT",
-                          body: { status: "APPROVED", version: report.version },
-                        })
-                      }
-                    >
-                      Duyệt báo cáo
-                    </button>
-                    <button
-                      disabled={write.isPending}
-                      onClick={() =>
-                        write.mutate({
-                          path: `/reports/${report.id}/status`,
-                          method: "PUT",
-                          body: { status: "REJECTED", version: report.version },
-                        })
-                      }
-                    >
-                      Từ chối
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-            {user.role === "ADMIN" && report.status === "APPROVED" && (
-              <button onClick={() => setEditing(report)}>
-                Điều chỉnh có lưu lịch sử
-              </button>
-            )}
-          </div>
-        </Card>
-      ))}
-      {query.data?.items.length === 0 && <Card>Chưa có báo cáo.</Card>}
-      {query.data && (
+
+      <div className="card-list">
+        {query.data?.items.map((report) => (
+          <ReportCard
+            key={report.id}
+            report={report}
+            isAdmin={isAdmin}
+            onEdit={() => setEditing(report)}
+          />
+        ))}
+      </div>
+
+      {!!query.data?.items.length && (
         <PageControls
           offset={offset}
           hasMore={query.data.hasMore}
           onChange={setOffset}
         />
       )}
+
+      {(creating || editing) && (
+        <ReportDialog
+          key={editing?.id || "new"}
+          editing={editing}
+          onClose={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+        />
+      )}
+      <MutationStatus pending={write.isPending} error={write.error} />
     </>
   );
 }
+
+function ReportCard({
+  report,
+  isAdmin,
+  onEdit,
+}: {
+  report: Report;
+  isAdmin: boolean;
+  onEdit: () => void;
+}) {
+  const write = useWrite();
+  const status = reportStatus[report.status] || {
+    label: report.status,
+    tone: "gray" as const,
+  };
+  const sums = report.lines.reduce(
+    (total, line) => ({
+      sold: total.sold + line.sold,
+      damaged: total.damaged + line.damaged,
+      giftGood: total.giftGood + line.giftGood,
+      giftDamaged: total.giftDamaged + line.giftDamaged,
+    }),
+    { sold: 0, damaged: 0, giftGood: 0, giftDamaged: 0 },
+  );
+  const correction = report.replacesId || report.status === "SUPERSEDED";
+
+  return (
+    <article className="order-card">
+      <div className="order-top">
+        <div>
+          <Badge tone={status.tone}>{status.label}</Badge>
+          <span className="period-chip">Tuần {report.periodId}</span>
+          {correction && <span className="period-chip">Điều chỉnh</span>}
+        </div>
+        <span className="order-date">{date(report.submittedAt)}</span>
+      </div>
+      <div className="order-main">
+        <div>
+          <h2>{isAdmin ? report.memberName : "Báo cáo phát sinh"}</h2>
+          <p>{report.lines.length} đợt phát sinh</p>
+        </div>
+      </div>
+      <div className="metric-chips">
+        <span>
+          <strong>{sums.sold}</strong> bán
+        </span>
+        <span>
+          <strong>{sums.damaged}</strong> hư
+        </span>
+        <span>
+          <strong>{sums.giftGood}</strong> tặng tốt
+        </span>
+        <span>
+          <strong>{sums.giftDamaged}</strong> tặng hư
+        </span>
+      </div>
+      {report.notes && <p className="report-notes">{report.notes}</p>}
+      <details className="order-details">
+        <summary>
+          Chi tiết đợt phát sinh <Icon name="down" size={16} />
+        </summary>
+        <div className="line-list">
+          {report.lines.map((line, index) => (
+            <div className="line-row" key={index}>
+              <span>
+                <strong>{date(line.effectiveAt)}</strong>
+                <small>
+                  Bán {line.sold} · Hư {line.damaged}
+                </small>
+              </span>
+              <span>
+                Tặng {line.giftGood + line.giftDamaged}
+                <small>
+                  {line.giftGood} tốt · {line.giftDamaged} hư
+                </small>
+              </span>
+            </div>
+          ))}
+        </div>
+      </details>
+      <div className="order-actions">
+        {report.status === "PENDING" && (
+          <button type="button" className="btn sm ghost" onClick={onEdit}>
+            Sửa báo cáo
+          </button>
+        )}
+        {isAdmin && report.status === "PENDING" && (
+          <>
+            <button
+              type="button"
+              className="btn sm primary"
+              disabled={write.isPending}
+              onClick={() =>
+                write.mutate({
+                  path: `/reports/${report.id}/status`,
+                  method: "PUT",
+                  body: { status: "APPROVED", version: report.version },
+                })
+              }
+            >
+              Duyệt
+            </button>
+            <button
+              type="button"
+              className="btn sm"
+              disabled={write.isPending}
+              onClick={() =>
+                write.mutate({
+                  path: `/reports/${report.id}/status`,
+                  method: "PUT",
+                  body: { status: "REJECTED", version: report.version },
+                })
+              }
+            >
+              Từ chối
+            </button>
+          </>
+        )}
+        {isAdmin && report.status === "APPROVED" && (
+          <button type="button" className="btn sm ghost" onClick={onEdit}>
+            Điều chỉnh
+          </button>
+        )}
+        <MutationStatus pending={write.isPending} error={write.error} />
+      </div>
+    </article>
+  );
+}
+
 type InputLine = Omit<Activity, "effectiveAt"> & { when: string };
+
 const blank = (): InputLine => ({
   lotId: "",
   when: nowLocal(),
@@ -153,41 +246,44 @@ const blank = (): InputLine => ({
   giftGood: 0,
   giftDamaged: 0,
 });
-function ReportForm({
+
+function ReportDialog({
   editing,
-  onDone,
+  onClose,
 }: {
   editing: Report | null;
-  onDone: () => void;
+  onClose: () => void;
 }) {
+  const correction = editing?.status === "APPROVED";
   const inventory = useQuery({
-      queryKey: ["inventory", editing?.memberId],
-      queryFn: () =>
-        api<Inventory>(
-          `/inventory${editing ? `?memberId=${editing.memberId}` : ""}`,
-        ),
-    }),
-    write = useWrite();
-  const [week, setWeek] = useState(editing?.periodId || monday()),
-    [notes, setNotes] = useState(editing?.notes || ""),
-    [reason, setReason] = useState("");
+    queryKey: ["inventory", editing?.memberId],
+    queryFn: () =>
+      api<Inventory>(
+        `/inventory${editing ? `?memberId=${editing.memberId}` : ""}`,
+      ),
+  });
+  const write = useWrite();
+  const [week, setWeek] = useState(editing?.periodId || monday());
+  const [notes, setNotes] = useState(editing?.notes || "");
+  const [reason, setReason] = useState("");
   const [lines, setLines] = useState<InputLine[]>(
-    editing?.lines.map((l) => ({
-      lotId: l.lotId,
-      sold: l.sold,
-      damaged: l.damaged,
-      giftGood: l.giftGood,
-      giftDamaged: l.giftDamaged,
-      when: new Date(+new Date(l.effectiveAt) + 7 * 3600000)
+    editing?.lines.map((line) => ({
+      lotId: line.lotId,
+      sold: line.sold,
+      damaged: line.damaged,
+      giftGood: line.giftGood,
+      giftDamaged: line.giftDamaged,
+      when: new Date(+new Date(line.effectiveAt) + 7 * 3600000)
         .toISOString()
         .slice(0, 23),
     })) || [blank()],
   );
+
   const update = (index: number, changes: Partial<InputLine>) =>
-    setLines(lines.map((l, i) => (i === index ? { ...l, ...changes } : l)));
-  const correction = editing?.status === "APPROVED";
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
+    setLines(lines.map((line, i) => (i === index ? { ...line, ...changes } : line)));
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
     const body = {
       periodId: week,
       notes,
@@ -206,128 +302,154 @@ function ReportForm({
         method: editing && !correction ? "PUT" : "POST",
         body,
       },
-      {
-        onSuccess: () => {
-          setLines([blank()]);
-          setNotes("");
-          onDone();
-        },
-      },
+      { onSuccess: onClose },
     );
   };
+
   return (
-    <Card>
-      <h2>
-        {correction
-          ? "Điều chỉnh bản đã duyệt"
+    <Dialog
+      open
+      onClose={onClose}
+      title={
+        correction
+          ? "Điều chỉnh báo cáo đã duyệt"
           : editing
             ? "Sửa báo cáo chờ duyệt"
-            : "Gửi phần phát sinh mới"}
-      </h2>
-      <form onSubmit={submit}>
-        <Field label="Tuần kết quả (thứ Hai)">
-          <input
-            type="date"
-            required
-            disabled={!!editing}
-            value={week}
-            onChange={(e) => setWeek(e.target.value)}
-          />
-        </Field>
-        <p className="muted">
-          Hàng hư chuyển sang tồn hư. Tặng hư chỉ xuất khỏi tồn hư, không trừ
-          hàng tốt lần nữa.
-        </p>
-        {inventory.error && <ErrorNotice error={inventory.error} />}{" "}
-        {lines.map((line, index) => (
-          <div key={index} className="inset form-grid">
-            <Field label="Đợt thực nhận">
-              <select
-                required
-                value={line.lotId}
-                onChange={(e) => update(index, { lotId: e.target.value })}
-              >
-                <option value="">Chọn đợt nhận</option>
-                {inventory.data?.lots.map((lot) => (
-                  <option key={lot.id} value={lot.id}>
-                    {lot.productName} · {date(lot.effectiveAt)} · còn{" "}
-                    {lot.sellable} tốt/{lot.damaged} hư
-                  </option>
-                ))}
-                {editing &&
-                  !inventory.data?.lots.some((l) => l.id === line.lotId) && (
-                    <option value={line.lotId}>Đợt nhận của báo cáo gốc</option>
-                  )}
-              </select>
-            </Field>
-            <Field label="Ngày giờ phát sinh (Việt Nam)">
-              <input
-                type="datetime-local"
-                step="any"
-                required
-                value={line.when}
-                max={nowLocal()}
-                onChange={(e) => update(index, { when: e.target.value })}
-              />
-            </Field>
-            {(["sold", "damaged", "giftGood", "giftDamaged"] as const).map(
-              (key, i) => (
-                <Field
-                  key={key}
-                  label={
-                    ["Bán thêm", "Hư mới", "Tặng hàng tốt", "Tặng hàng hư"][i]
-                  }
-                >
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    required
-                    value={line[key]}
-                    onChange={(e) =>
-                      update(index, { [key]: Number(e.target.value) })
-                    }
-                  />
-                </Field>
-              ),
-            )}
-            {lines.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setLines(lines.filter((_, i) => i !== index))}
-              >
-                Bỏ dòng
-              </button>
-            )}
-          </div>
-        ))}
-        <button type="button" onClick={() => setLines([...lines, blank()])}>
-          Thêm đợt / ngày phát sinh
-        </button>
-        <Field label="Ghi chú">
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </Field>
-        {correction && (
-          <Field label="Lý do điều chỉnh">
-            <input
-              required
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </Field>
-        )}
-        <div className="actions">
-          <button className="primary" disabled={write.isPending}>
+            : "Gửi báo cáo phát sinh"
+      }
+      wide
+      footer={
+        <div className="dialog-submit">
+          <span>
+            <strong>{lines.length}</strong> đợt
+          </span>
+          <button
+            type="submit"
+            form="report-form"
+            className="btn primary"
+            disabled={write.isPending}
+          >
             Lưu báo cáo
           </button>
-          {editing && (
-            <button type="button" onClick={onDone}>
-              Bỏ sửa
-            </button>
+        </div>
+      }
+    >
+      <form id="report-form" onSubmit={submit}>
+        <div className="form-grid">
+          <Field label="Tuần kết quả">
+            <input
+              type="date"
+              required
+              disabled={!!editing}
+              value={week}
+              onChange={(event) => setWeek(event.target.value)}
+            />
+          </Field>
+          {correction && (
+            <Field label="Lý do điều chỉnh">
+              <input
+                required
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Ví dụ: nhập nhầm số lượng bán"
+              />
+            </Field>
           )}
         </div>
+
+        {inventory.error && <ErrorNotice error={inventory.error} />}
+        {inventory.isPending && <p className="loading">Đang tải hàng đang giữ…</p>}
+
+        <div className="report-lines">
+          {lines.map((line, index) => (
+            <div className="report-line" key={index}>
+              <div className="report-line-head">
+                <span>Đợt {index + 1}</span>
+                {lines.length > 1 && (
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label="Bỏ đợt"
+                    onClick={() => setLines(lines.filter((_, i) => i !== index))}
+                  >
+                    <Icon name="close" size={16} />
+                  </button>
+                )}
+              </div>
+              <Field label="Đợt hàng đã nhận">
+                <select
+                  required
+                  value={line.lotId}
+                  onChange={(event) =>
+                    update(index, { lotId: event.target.value })
+                  }
+                >
+                  <option value="">Chọn đợt nhận</option>
+                  {inventory.data?.lots.map((lot) => (
+                    <option key={lot.id} value={lot.id}>
+                      {lot.productName} · {date(lot.effectiveAt)} · còn{" "}
+                      {lot.sellable} tốt/{lot.damaged} hư
+                    </option>
+                  ))}
+                  {editing &&
+                    line.lotId &&
+                    !inventory.data?.lots.some((lot) => lot.id === line.lotId) && (
+                      <option value={line.lotId}>Đợt của báo cáo gốc</option>
+                    )}
+                </select>
+              </Field>
+              <Field label="Thời điểm phát sinh (Việt Nam)">
+                <input
+                  type="datetime-local"
+                  step="any"
+                  required
+                  value={line.when}
+                  max={nowLocal()}
+                  onChange={(event) =>
+                    update(index, { when: event.target.value })
+                  }
+                />
+              </Field>
+              <div className="quantity-grid">
+                {(["sold", "damaged", "giftGood", "giftDamaged"] as const).map(
+                  (key, i) => (
+                    <Field
+                      key={key}
+                      label={["Bán", "Hư mới", "Tặng tốt", "Tặng hư"][i]}
+                    >
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        required
+                        value={line[key]}
+                        onChange={(event) =>
+                          update(index, { [key]: Number(event.target.value) })
+                        }
+                      />
+                    </Field>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="btn ghost add-line"
+          onClick={() => setLines([...lines, blank()])}
+        >
+          <Icon name="plus" size={16} /> Thêm đợt phát sinh
+        </button>
+        <Field label="Ghi chú">
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Không bắt buộc"
+          />
+        </Field>
         <MutationStatus pending={write.isPending} error={write.error} />
       </form>
-    </Card>
+    </Dialog>
   );
 }

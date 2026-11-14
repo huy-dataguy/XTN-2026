@@ -165,6 +165,11 @@ export interface Tag {
   name: string;
   color: string;
 }
+export interface Group {
+  id: string;
+  name: string;
+  color: string;
+}
 export interface Statement {
   tags: string[];
   id: string;

@@ -9,7 +9,7 @@ function resolveApiBase() {
       window.localStorage.getItem("xtn_api_base_url");
     if (override) return override.replace(/\/$/, "");
     if (window.location.hostname.endsWith(".vercel.app")) {
-      return "https://datalab.tailcba9a1.ts.net/api/v1";
+      return "https://xtn-api.vercel.app/api/v1";
     }
   }
   return "/api/v1";

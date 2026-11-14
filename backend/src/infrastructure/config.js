@@ -1,5 +1,5 @@
 function configuration(env = process.env) {
-  if (!env.MONGO_URI) throw new Error("MONGO_URI is required");
+  if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   if (!env.JWT_SECRET || env.JWT_SECRET.length < 32)
     throw new Error("JWT_SECRET must have at least 32 characters");
   if (env.NODE_ENV === "production" && !env.CORS_ORIGINS)
@@ -18,7 +18,7 @@ function configuration(env = process.env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("PORT must be an integer from 1 to 65535");
   return {
-    mongoUri: env.MONGO_URI,
+    databaseUrl: env.DATABASE_URL,
     jwtSecret: env.JWT_SECRET,
     inviteCode: env.DISTRIBUTOR_REGISTRATION_CODE || null,
     origins,

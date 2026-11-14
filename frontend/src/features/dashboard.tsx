@@ -1,23 +1,35 @@
-import { useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../shared/api";
-import type { Weekly, User } from "../shared/types";
+import type { Order, Page, Weekly, User } from "../shared/types";
 import {
   Badge,
-  Card,
   ErrorNotice,
-  Field,
-  monday,
-  money,
-  useWrite,
+  Icon,
   MutationStatus,
   PageControls,
+  ReasonDialog,
+  StatCard,
+  addDays,
+  money,
+  monday,
+  useWrite,
+  weekRange,
 } from "../shared/ui";
+
 export default function Dashboard({ user }: { user: User }) {
   const [params, setParams] = useSearchParams();
-  const from = params.get("from") || monday(),
-    to = params.get("to") || from;
+  const from = params.get("from") || monday();
+  const to = params.get("to") || from;
   const offset = Number(params.get("offset") || 0);
+  const isAdmin = user.role === "ADMIN";
+  const [range, setRange] = useState(from !== to);
+  const [showAll, setShowAll] = useState(false);
+  const [periodAction, setPeriodAction] = useState<"close" | "reopen" | null>(
+    null,
+  );
+
   const query = useQuery({
     queryKey: ["weekly", from, to, offset],
     queryFn: () =>
@@ -25,289 +37,530 @@ export default function Dashboard({ user }: { user: User }) {
         `/analytics/weekly?from=${from}&to=${to}&limit=20&offset=${offset}`,
       ),
   });
+
+  const pendingOrders = useQuery({
+    queryKey: ["orders", "pending-count"],
+    queryFn: () => api<Page<Order>>("/orders?limit=200"),
+    enabled: isAdmin,
+  });
+
   const migration = useQuery({
     queryKey: ["migration-status"],
     queryFn: () =>
       api<{ products: number; orders: number; reports: number }>(
         "/migration/status",
       ),
-    enabled: user.role === "ADMIN",
+    enabled: isAdmin,
   });
+
   const write = useWrite();
-  const update = (key: string, value: string) =>
+
+  const changeRange = (nextFrom: string, nextTo = nextFrom) => {
     setParams((prev) => {
-      prev.set(key, value);
-      if (key !== "offset") prev.delete("offset");
+      prev.set("from", nextFrom);
+      prev.set("to", nextTo);
+      prev.delete("offset");
       return prev;
     });
+  };
+
+  const shiftWeek = (direction: number) => {
+    changeRange(
+      addDays(from, direction * 7),
+      addDays(to, direction * 7),
+    );
+  };
+
+  const toggleRange = () => {
+    if (range) {
+      setRange(false);
+      changeRange(from);
+    } else {
+      setRange(true);
+      changeRange(from, addDays(from, 7));
+    }
+  };
+
+  const data = query.data;
+  const totals = data?.totals;
+  const memberTotals = [...(data?.memberTotals || [])].sort(
+    (a, b) => b.revenue - a.revenue,
+  );
+  const maxRevenue = Math.max(1, ...memberTotals.map((m) => m.revenue));
+  const visibleMembers = showAll ? memberTotals : memberTotals.slice(0, 5);
+  const pendingReports =
+    data?.rows.reduce((sum, row) => sum + row.pendingReports, 0) || 0;
+  const pendingOrderCount =
+    pendingOrders.data?.items.filter((order) => order.status === "PENDING")
+      .length || 0;
+  const selfRow = data?.rows.find(
+    (row) => row.memberId === user.id && row.periodId === from,
+  );
+  const selfTotal = data?.memberTotals.find(
+    (row) => row.memberId === user.id,
+  );
+  const workload = [
+    {
+      show: pendingOrderCount > 0,
+      to: "/orders",
+      icon: "orders" as const,
+      title: `${pendingOrderCount} đơn chờ duyệt`,
+      hint: "Duyệt hoặc từ chối yêu cầu cấp hàng",
+    },
+    {
+      show: pendingReports > 0,
+      to: "/reports",
+      icon: "reports" as const,
+      title: `${pendingReports} báo cáo chờ duyệt`,
+      hint: "Kiểm tra và duyệt báo cáo phát sinh",
+    },
+    {
+      show: (totals?.incompleteRows || 0) > 0,
+      to: "/reports",
+      icon: "check" as const,
+      title: `${totals?.incompleteRows} lượt chưa chốt tuần`,
+      hint: "Nhắc thành viên hoàn tất báo cáo tuần",
+    },
+    {
+      show: (totals?.missingTargets || 0) > 0,
+      to: "/members",
+      icon: "team" as const,
+      title: `${totals?.missingTargets} lượt thiếu mục tiêu`,
+      hint: "Gán mục tiêu doanh thu cho thành viên",
+    },
+  ].filter((item) => item.show);
+
   return (
     <>
-      <div className="page-heading">
+      <header className="page-head">
         <div>
-          <span className="eyebrow">KẾT QUẢ THEO TUẦN</span>
-          <h1>Tổng quan hoạt động</h1>
-          <p className="muted">
-            Tuần bán hàng và ngày nộp báo cáo được theo dõi riêng.
+          <h1>{isAdmin ? "Tổng quan" : "Tuần của bạn"}</h1>
+          <p>
+            {weekRange(from, to)} ·{" "}
+            {data?.provisional ? "Số liệu tạm thời" : "Các kỳ đã khóa"}
           </p>
         </div>
-        <div className="filters">
-          <Field label="Từ tuần thứ Hai">
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => update("from", e.target.value)}
-            />
-          </Field>
-          <Field label="Đến tuần thứ Hai">
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => update("to", e.target.value)}
-            />
-          </Field>
+        <div className="week-picker">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => shiftWeek(-1)}
+            aria-label="Tuần trước"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
+          <input
+            type="date"
+            aria-label="Từ tuần"
+            value={from}
+            onChange={(event) =>
+              changeRange(event.target.value, range ? to : event.target.value)
+            }
+          />
+          {range && (
+            <>
+              <span className="range-dash">–</span>
+              <input
+                type="date"
+                aria-label="Đến tuần"
+                min={from}
+                value={to}
+                onChange={(event) => changeRange(from, event.target.value)}
+              />
+            </>
+          )}
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => shiftWeek(1)}
+            aria-label="Tuần sau"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+          <button type="button" className="btn sm ghost range-toggle" onClick={toggleRange}>
+            {range ? "1 tuần" : "Nhiều tuần"}
+          </button>
+          {from !== monday() && (
+            <button
+              type="button"
+              className="btn sm"
+              onClick={() => {
+                setRange(false);
+                changeRange(monday());
+              }}
+            >
+              Tuần này
+            </button>
+          )}
         </div>
-      </div>
+      </header>
+
       {migration.data &&
         Object.values(migration.data).some((value) => value > 0) && (
           <div className="notice">
-            Cần đối soát dữ liệu cũ: {migration.data.products} sản phẩm,{" "}
-            {migration.data.orders} đơn và {migration.data.reports} báo cáo chưa
-            chuyển đổi. Số liệu bên dưới chỉ thuộc hệ thống mới.
+            Còn dữ liệu cũ chưa chuyển đổi: {migration.data.products} sản phẩm,{" "}
+            {migration.data.orders} đơn, {migration.data.reports} báo cáo.
           </div>
         )}
       {migration.error && <ErrorNotice error={migration.error} />}
-      {query.isPending && <p role="status">Đang tải kết quả…</p>}
+      {query.isPending && (
+        <div className="skeleton-grid" aria-label="Đang tải">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      )}
       {query.error && (
         <ErrorNotice error={query.error} retry={() => void query.refetch()} />
       )}
-      {query.data && (
+
+      {data && totals && (
         <>
-          <div className="notice">
-            {query.data.provisional
-              ? "Số liệu tạm thời — còn kỳ chưa khóa hoặc thành viên chưa chốt."
-              : "Các kỳ đã khóa."}{" "}
-            {query.data.totals.incompleteRows} lượt thành viên/tuần chưa chốt.{" "}
-            {query.data.totals.missingTargets} lượt chưa có mục tiêu.
-          </div>
           <div className="stat-grid">
-            {[
-              ["Doanh thu đã duyệt", money(query.data.totals.revenue)],
-              ["Đã bán", `${query.data.totals.sold} sản phẩm`],
-              ["Lãi đóng góp", money(query.data.totals.contribution)],
-              [
-                "Hoàn thành KPI",
-                query.data.totals.achievement == null
+            <StatCard
+              label="Doanh thu đã duyệt"
+              value={money(totals.revenue)}
+              icon="finance"
+            />
+            <StatCard
+              label="Đã bán"
+              value={`${totals.sold} sản phẩm`}
+              icon="inventory"
+              tone="blue"
+            />
+            <StatCard
+              label="Lãi đóng góp"
+              value={money(totals.contribution)}
+              hint="Doanh thu trừ giá vốn hàng bán, hàng hư và hàng tặng. Chưa trừ hoa hồng và chi phí vận hành."
+              icon="wallet-in"
+            />
+            <StatCard
+              label="Hoàn thành KPI"
+              value={
+                totals.achievement == null
                   ? "Chưa đủ dữ liệu"
-                  : `${query.data.totals.achievement.toFixed(2)}%`,
-              ],
-            ].map(([label, value]) => (
-              <Card key={label}>
-                <p className="muted">{label}</p>
-                <strong className="stat-value">{value}</strong>
-              </Card>
-            ))}
+                  : `${totals.achievement.toFixed(1)}%`
+              }
+              icon="tasks"
+              tone="amber"
+            />
           </div>
-          <p className="muted small">
-            Lãi đóng góp = doanh thu − giá vốn hàng bán − giá vốn hàng hư − giá
-            vốn hàng tốt tặng. Chưa trừ hoa hồng và chi phí vận hành.
-          </p>
-          <p className="muted">
-            Chi tiết {query.data.memberTotals.length} /{" "}
-            {query.data.pagination.total} thành viên; tổng kết phía trên tính
-            toàn bộ phạm vi.
-          </p>
-          <Card>
-            <h2>Tổng kết thành viên trong khoảng tuần</h2>
-            <div
-              className="table-wrap"
-              tabIndex={0}
-              role="region"
-              aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
-            >
-              <table>
-                <thead>
-                  <tr>
-                    <th>Thành viên</th>
-                    <th>Doanh thu</th>
-                    <th>Lãi đóng góp</th>
-                    <th>KPI nhiều tuần</th>
-                    <th>Tồn cuối khoảng</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {query.data.memberTotals.map((row) => (
-                    <tr key={row.memberId}>
-                      <td>
-                        {row.memberName}
-                        <small>
-                          {row.complete ? "Đã chốt đủ" : "Còn tuần chưa chốt"}
-                        </small>
-                      </td>
-                      <td>
-                        {money(row.revenue)}
-                        <small>{row.sold} đã bán</small>
-                      </td>
-                      <td>{money(row.contribution)}</td>
-                      <td>
-                        {row.achievement == null
-                          ? "Chưa đủ dữ liệu"
-                          : `${row.achievement.toFixed(2)}%`}
-                        <small>
-                          Mục tiêu{" "}
-                          {row.missingTargets
-                            ? "chưa đủ"
-                            : money(row.targetRevenue)}
-                        </small>
-                      </td>
-                      <td>
-                        {row.closing.sellable} tốt / {row.closing.physical} vật
-                        lý
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-          <Card>
-            <h2>Chi tiết từng tuần</h2>
-            <div
-              className="table-wrap"
-              tabIndex={0}
-              role="region"
-              aria-label="Bảng dữ liệu, cuộn ngang để xem đầy đủ"
-            >
-              <table>
-                <thead>
-                  <tr>
-                    <th>Thành viên / tuần</th>
-                    <th>Doanh thu</th>
-                    <th>Giá vốn / lãi gộp</th>
-                    <th>Lãi đóng góp</th>
-                    <th>Tồn tốt / vật lý</th>
-                    <th>KPI</th>
-                    <th>Báo cáo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {query.data.rows.map((row) => (
-                    <tr key={`${row.memberId}:${row.periodId}`}>
-                      <td>
+
+          {isAdmin ? (
+            <>
+              <section className="panel action-panel">
+                <div className="section-head">
+                  <h2>Cần xử lý</h2>
+                  <small>
+                    {totals.incompleteRows} lượt chưa chốt ·{" "}
+                    {totals.missingTargets} thiếu mục tiêu
+                  </small>
+                </div>
+                {workload.length ? (
+                  <div className="action-list">
+                    {workload.map((item) => (
+                      <Link key={item.title} to={item.to} className="action-row">
+                        <span className="action-icon">
+                          <Icon name={item.icon} />
+                        </span>
+                        <span className="action-copy">
+                          <strong>{item.title}</strong>
+                          <small>{item.hint}</small>
+                        </span>
+                        <Icon name="right" size={18} />
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="all-clear">
+                    <Icon name="check" />
+                    Không có việc nào đang chờ.
+                  </div>
+                )}
+              </section>
+
+              <section className="panel">
+                <div className="section-head">
+                  <h2>Hiệu quả theo thành viên</h2>
+                  <small>{data.pagination.total} thành viên</small>
+                </div>
+                <div className="member-list">
+                  {visibleMembers.map((row, index) => (
+                    <div className="member-row" key={row.memberId}>
+                      <span className="rank">{index + 1}</span>
+                      <div className="member-copy">
                         <strong>{row.memberName}</strong>
                         <small>
-                          {row.periodId} · {row.group}
+                          {row.complete ? "Đã chốt" : "Chưa chốt"} ·{" "}
+                          {row.closing.sellable} tốt
                         </small>
-                      </td>
-                      <td>
-                        {money(row.revenue)}
-                        <small>
-                          {row.sold} đã bán · {row.received} thực nhận
-                        </small>
-                      </td>
-                      <td>
-                        {money(row.cogs)}
-                        <small>{money(row.grossProfit)}</small>
-                      </td>
-                      <td>
-                        {money(row.contribution)}
-                        <small>
-                          Hư {row.damaged} · tặng tốt {row.giftGood} · tặng hư{" "}
-                          {row.giftDamaged}
-                        </small>
-                      </td>
-                      <td>
-                        {row.closing.sellable} / {row.closing.physical}
-                        <small>Đầu kỳ: {row.opening.sellable} tốt</small>
-                      </td>
-                      <td>
+                      </div>
+                      <span className="member-bar" aria-hidden="true">
+                        <i
+                          style={{
+                            width: `${Math.max(
+                              3,
+                              Math.round((row.revenue / maxRevenue) * 100),
+                            )}%`,
+                          }}
+                        />
+                      </span>
+                      <div className="member-money">
+                        <strong>{money(row.revenue)}</strong>
+                        <small>Lãi {money(row.contribution)}</small>
+                      </div>
+                      <Badge
+                        tone={
+                          row.achievement == null
+                            ? "gray"
+                            : row.achievement >= 100
+                              ? "green"
+                              : "amber"
+                        }
+                      >
                         {row.achievement == null
-                          ? "N/A"
-                          : `${row.achievement.toFixed(2)}%`}
-                        <small>Mục tiêu {money(row.targetRevenue)}</small>
-                      </td>
-                      <td>
-                        <Badge>{row.complete ? "Đã chốt" : "Chưa chốt"}</Badge>
-                        <small>
-                          {row.hasExtension ? "Được gia hạn · " : ""}
-                          {row.pendingReports} chờ duyệt ·{" "}
-                          {row.periodStatus === "CLOSED"
-                            ? "Đã khóa"
-                            : "Đang mở"}
-                        </small>
-                      </td>
-                    </tr>
+                          ? "Chưa đủ"
+                          : `${row.achievement.toFixed(0)}%`}
+                      </Badge>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-              {!query.data.rows.length && <p>Chưa có thành viên trong kỳ.</p>}
-            </div>
-          </Card>
-          <PageControls
-            offset={offset}
-            hasMore={query.data.pagination.hasMore}
-            onChange={(value) => update("offset", String(value))}
-            pageSize={20}
-          />
+                  {!memberTotals.length && (
+                    <p className="muted">Chưa có thành viên trong kỳ.</p>
+                  )}
+                </div>
+                {memberTotals.length > 5 && (
+                  <button
+                    type="button"
+                    className="btn sm ghost show-all"
+                    onClick={() => setShowAll(!showAll)}
+                  >
+                    {showAll ? "Thu gọn" : `Xem tất cả ${memberTotals.length}`}
+                  </button>
+                )}
+                {showAll && (
+                  <PageControls
+                    offset={offset}
+                    hasMore={data.pagination.hasMore}
+                    onChange={(value) => {
+                      setParams((prev) => {
+                        prev.set("offset", String(value));
+                        return prev;
+                      });
+                    }}
+                    pageSize={20}
+                  />
+                )}
+              </section>
+
+              <details className="panel disclosure">
+                <summary>
+                  <span>Chi tiết từng tuần</span>
+                  <small>{data.pagination.total} dòng</small>
+                  <Icon name="down" size={18} />
+                </summary>
+                <div className="table-wrap" tabIndex={0} role="region" aria-label="Chi tiết từng tuần">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Thành viên / tuần</th>
+                        <th>Doanh thu</th>
+                        <th>Lãi đóng góp</th>
+                        <th>Tồn cuối</th>
+                        <th>KPI</th>
+                        <th>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.rows.map((row) => (
+                        <tr key={`${row.memberId}:${row.periodId}`}>
+                          <td>
+                            <strong>{row.memberName}</strong>
+                            <small>
+                              Tuần {row.periodId}
+                              {row.group ? ` · ${row.group}` : ""}
+                            </small>
+                          </td>
+                          <td>
+                            {money(row.revenue)}
+                            <small>
+                              {row.sold} bán · {row.received} nhận
+                            </small>
+                          </td>
+                          <td>{money(row.contribution)}</td>
+                          <td>
+                            {row.closing.sellable} tốt
+                            <small>{row.closing.physical} vật lý</small>
+                          </td>
+                          <td>
+                            {row.achievement == null
+                              ? "—"
+                              : `${row.achievement.toFixed(1)}%`}
+                          </td>
+                          <td>
+                            <Badge tone={row.complete ? "green" : "amber"}>
+                              {row.complete ? "Đã chốt" : "Chưa chốt"}
+                            </Badge>
+                            <small>
+                              {row.pendingReports} chờ duyệt ·{" "}
+                              {row.periodStatus === "CLOSED"
+                                ? "Đã khóa"
+                                : "Đang mở"}
+                            </small>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!data.rows.length && <p>Chưa có dữ liệu trong kỳ.</p>}
+                </div>
+              </details>
+
+              <section className="panel period-panel">
+                <div>
+                  <h2>Quản lý kỳ</h2>
+                  <p className="muted">
+                    Khóa tuần {from} khi mọi thành viên đã chốt và hết hạn gia hạn.
+                  </p>
+                </div>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={write.isPending}
+                    onClick={() => setPeriodAction("close")}
+                  >
+                    Khóa kỳ
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    disabled={write.isPending}
+                    onClick={() => setPeriodAction("reopen")}
+                  >
+                    Mở lại kỳ
+                  </button>
+                </div>
+                <MutationStatus pending={write.isPending} error={write.error} />
+                <ReasonDialog
+                  key={periodAction || "closed"}
+                  open={periodAction !== null}
+                  title={periodAction === "close" ? "Khóa kỳ" : "Mở lại kỳ"}
+                  label="Lý do"
+                  confirmLabel={periodAction === "close" ? "Khóa kỳ" : "Mở lại"}
+                  pending={write.isPending}
+                  onClose={() => setPeriodAction(null)}
+                  onSubmit={(reason) => {
+                    if (!periodAction) return;
+                    write.mutate(
+                      {
+                        path: `/periods/${periodAction}`,
+                        body: { periodId: from, reason },
+                      },
+                      { onSuccess: () => setPeriodAction(null) },
+                    );
+                  }}
+                />
+              </section>
+            </>
+          ) : (
+            <>
+              <section className="panel week-status">
+                <div>
+                  <span className="eyebrow">TRẠNG THÁI TUẦN</span>
+                  <h2>
+                    {selfRow?.complete
+                      ? "Đã chốt kết quả tuần"
+                      : "Chưa chốt kết quả tuần"}
+                  </h2>
+                  <p className="muted">
+                    {selfRow?.complete
+                      ? "Kết quả đã được ghi nhận. Nếu có sai sót, gửi báo cáo điều chỉnh."
+                      : "Khai báo đủ bán, hư, tặng rồi chốt tuần để khóa kết quả."}
+                  </p>
+                  <div className="week-metrics">
+                    <span>
+                      <strong>{selfTotal?.closing.sellable ?? 0}</strong> tốt
+                    </span>
+                    <span>
+                      <strong>{selfTotal?.closing.damaged ?? 0}</strong> hư
+                    </span>
+                    <span>
+                      <strong>{selfTotal?.closing.physical ?? 0}</strong> vật lý
+                    </span>
+                  </div>
+                </div>
+                <div className="week-actions">
+                  <Link to="/reports" className="btn">
+                    Báo cáo phát sinh
+                  </Link>
+                  {!selfRow?.complete && (
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={write.isPending}
+                      onClick={() =>
+                        write.mutate({
+                          path: "/periods/complete",
+                          body: { periodId: from },
+                        })
+                      }
+                    >
+                      Chốt kết quả tuần
+                    </button>
+                  )}
+                </div>
+                <MutationStatus pending={write.isPending} error={write.error} />
+              </section>
+
+              <section className="panel">
+                <div className="section-head">
+                  <h2>Lịch sử tuần</h2>
+                  <small>{data.rows.length} tuần</small>
+                </div>
+                <div className="week-list">
+                  {data.rows.map((row) => (
+                    <div className="week-row" key={`${row.memberId}:${row.periodId}`}>
+                      <div>
+                        <strong>Tuần {row.periodId}</strong>
+                        <small>{row.sold} sản phẩm đã bán</small>
+                      </div>
+                      <div>
+                        <strong>{money(row.revenue)}</strong>
+                        <small>Lãi {money(row.contribution)}</small>
+                      </div>
+                      <div>
+                        <strong>
+                          {row.achievement == null
+                            ? "—"
+                            : `${row.achievement.toFixed(0)}%`}
+                        </strong>
+                        <small>KPI</small>
+                      </div>
+                      <Badge tone={row.complete ? "green" : "amber"}>
+                        {row.complete ? "Đã chốt" : "Chưa chốt"}
+                      </Badge>
+                    </div>
+                  ))}
+                  {!data.rows.length && (
+                    <p className="muted">Chưa có tuần nào trong khoảng đã chọn.</p>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
+
+          {totals.contribution != null && isAdmin && (
+            <p className="fine-print">
+              Lãi đóng góp = doanh thu − giá vốn hàng bán − hàng hư − hàng tặng.
+              Chưa trừ hoa hồng và chi phí vận hành.
+            </p>
+          )}
         </>
-      )}
-      {user.role === "ADMIN" ? (
-        <Card>
-          <h2>Quản lý kỳ</h2>
-          <p className="muted">
-            Thao tác áp dụng tuần {from}. Khóa kỳ yêu cầu thành viên đã chốt và
-            hết thời hạn gia hạn.
-          </p>
-          <div className="actions">
-            <button
-              disabled={write.isPending}
-              onClick={() => {
-                const reason = prompt("Lý do khóa kỳ");
-                if (reason)
-                  write.mutate({
-                    path: "/periods/close",
-                    body: { periodId: from, reason },
-                  });
-              }}
-            >
-              Khóa kỳ
-            </button>
-            <button
-              disabled={write.isPending}
-              onClick={() => {
-                const reason = prompt("Lý do mở lại kỳ");
-                if (reason)
-                  write.mutate({
-                    path: "/periods/reopen",
-                    body: { periodId: from, reason },
-                  });
-              }}
-            >
-              Mở lại kỳ
-            </button>
-          </div>
-          <MutationStatus pending={write.isPending} error={write.error} />
-        </Card>
-      ) : (
-        <Card>
-          <h2>Xác nhận đã khai báo đủ tuần {from}</h2>
-          <p className="muted">
-            Chỉ chốt khi đã khai báo đủ bán, hư và tặng; các báo cáo đã được xử
-            lý. Có thể xác nhận tuần không phát sinh.
-          </p>
-          <button
-            className="primary"
-            disabled={write.isPending}
-            onClick={() =>
-              write.mutate({
-                path: "/periods/complete",
-                body: { periodId: from },
-              })
-            }
-          >
-            Chốt kết quả tuần
-          </button>
-          <MutationStatus pending={write.isPending} error={write.error} />
-        </Card>
       )}
     </>
   );

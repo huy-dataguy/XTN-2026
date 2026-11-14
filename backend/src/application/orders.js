@@ -1,4 +1,4 @@
-const { Order, Receipt, User } = require("../infrastructure/models");
+const repo = require("../infrastructure/repository");
 const { entity } = require("../infrastructure/transaction");
 const {
   fail,
@@ -10,7 +10,7 @@ const {
 const { openPeriod, incomplete, invalidateDownstream } = require("./periods");
 const { movement, getProduct } = require("./inventory-shared");
 const scoped = (actor) =>
-  actor.role === "ADMIN" ? {} : { memberId: actor.id };
+  actor.role === "ADMIN" ? null : actor.id;
 function normalizeItems(items) {
   const map = new Map();
   for (const item of items)
@@ -19,21 +19,21 @@ function normalizeItems(items) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([productId, quantity]) => ({ productId, quantity }));
 }
-async function reserveItems(items, oldItems, session) {
+async function reserveItems(items, oldItems, tx) {
   const next = normalizeItems(items),
     old = new Map(oldItems.map((i) => [String(i.productId), i]));
   const quantitiesById = new Map(next.map((i) => [i.productId, i.quantity]));
   const ids = [...new Set([...old.keys(), ...quantitiesById.keys()])].sort();
   const snapshots = [];
   for (const id of ids) {
-    const p = await getProduct(id, session),
+    const p = await getProduct(id, tx),
       count = quantitiesById.get(id) || 0,
       delta = count - (old.get(id)?.quantity || 0);
     if (count && !p.active) fail(409, "PRODUCT_ARCHIVED", "Sản phẩm ngừng cấp");
     if (delta > p.onHand - p.damagedOnHand - p.reserved)
       fail(409, "INSUFFICIENT_STOCK", `Không đủ hàng: ${p.name}`);
     p.reserved += delta;
-    await p.save({ session });
+    await repo.saveProduct(tx, p);
     if (count)
       snapshots.push({
         productId: p.id,
@@ -46,28 +46,21 @@ async function reserveItems(items, oldItems, session) {
   }
   return snapshots;
 }
-async function createOrder(input, actor, session) {
-  const items = await reserveItems(input.items, [], session);
-  const order = (
-    await Order.create(
-      [
-        {
-          memberId: actor.id,
-          memberName: actor.name,
-          intendedPeriodId: input.intendedPeriodId,
-          items,
-          totalAmount: safeMoney(
-            items.reduce((s, i) => safeMoney(s + i.quantity * i.price), 0),
-          ),
-        },
-      ],
-      { session },
-    )
-  )[0];
+async function createOrder(input, actor, tx) {
+  const items = await reserveItems(input.items, [], tx);
+  const order = await repo.createOrder(tx, {
+    memberId: actor.id,
+    memberName: actor.name,
+    intendedPeriodId: input.intendedPeriodId,
+    items,
+    totalAmount: safeMoney(
+      items.reduce((s, i) => safeMoney(s + i.quantity * i.price), 0),
+    ),
+  });
   return entity(order);
 }
-async function amendOrder(id, input, actor, session) {
-  const order = await Order.findById(id).session(session);
+async function amendOrder(id, input, actor, tx) {
+  const order = await repo.getOrderForUpdate(tx, id);
   if (!order?.memberId)
     fail(404, "NOT_FOUND", "Không tìm thấy đơn hoặc cần migrate");
   owner(actor, order.memberId);
@@ -80,16 +73,15 @@ async function amendOrder(id, input, actor, session) {
       "STATE_CONFLICT",
       "Đơn đã đổi hoặc đã nhận hàng; tạo yêu cầu bổ sung",
     );
-  order.items = await reserveItems(input.items, order.items, session);
+  order.items = await reserveItems(input.items, order.items, tx);
   order.totalAmount = safeMoney(
     order.items.reduce((s, i) => safeMoney(s + i.quantity * i.price), 0),
   );
   order.version++;
-  await order.save({ session });
-  return entity(order);
+  return entity(await repo.saveOrder(tx, order));
 }
-async function orderStatus(id, input, actor, session) {
-  const order = await Order.findById(id).session(session);
+async function orderStatus(id, input, actor, tx) {
+  const order = await repo.getOrderForUpdate(tx, id);
   if (!order?.memberId)
     fail(404, "NOT_FOUND", "Không tìm thấy đơn hoặc cần migrate");
   owner(actor, order.memberId);
@@ -111,18 +103,17 @@ async function orderStatus(id, input, actor, session) {
     )
       fail(409, "STATE_CONFLICT", "Không thể từ chối trạng thái này");
     for (const item of order.items) {
-      const p = await getProduct(item.productId, session);
+      const p = await getProduct(item.productId, tx);
       p.reserved -= item.quantity - item.receivedQuantity;
-      await p.save({ session });
+      await repo.saveProduct(tx, p);
     }
     order.status = input.status;
   } else fail(409, "STATE_CONFLICT", "Chuyển trạng thái không hợp lệ");
   order.version++;
-  await order.save({ session });
-  return entity(order);
+  return entity(await repo.saveOrder(tx, order));
 }
-async function receiveOrder(id, input, actor, session) {
-  const order = await Order.findById(id).session(session);
+async function receiveOrder(id, input, actor, tx) {
+  const order = await repo.getOrderForUpdate(tx, id);
   if (!order?.memberId)
     fail(404, "NOT_FOUND", "Không tìm thấy đơn hoặc cần migrate");
   owner(actor, order.memberId);
@@ -132,11 +123,7 @@ async function receiveOrder(id, input, actor, session) {
   )
     fail(409, "STATE_CONFLICT", "Đơn chưa duyệt hoặc đã thay đổi");
   const key = periodId(input.effectiveAt);
-  const member = await User.findOneAndUpdate(
-    { _id: order.memberId },
-    { $inc: { inventoryRevision: 1 } },
-    { session },
-  );
+  const member = await repo.bumpInventoryRevision(tx, order.memberId);
   if (
     !member?.createdAt ||
     +new Date(input.effectiveAt) < +bounds(periodId(member.createdAt)).start
@@ -146,36 +133,27 @@ async function receiveOrder(id, input, actor, session) {
       "BEFORE_MEMBER_JOIN",
       "Tuần nhận không được trước tuần thành viên tham gia; lịch sử cũ cần chuyển đổi có đối soát",
     );
-  await openPeriod(key, session);
-  await invalidateDownstream(order.memberId, key, session);
+  await openPeriod(key, tx);
+  await invalidateDownstream(order.memberId, key, tx);
   const receipts = [];
   for (const received of normalizeItems(input.items)) {
-    const line = order.items.find(
-      (i) => String(i.productId) === received.productId,
-    );
+    const line = order.items.find((i) => String(i.productId) === received.productId);
     if (!line || received.quantity > line.quantity - line.receivedQuantity)
       fail(409, "RECEIPT_EXCEEDS_ORDER", "Nhận vượt phần còn lại của đơn");
-    const p = await getProduct(line.productId, session);
+    const p = await getProduct(line.productId, tx);
     p.onHand -= received.quantity;
     p.reserved -= received.quantity;
-    await p.save({ session });
-    const lot = (
-      await Receipt.create(
-        [
-          {
-            orderId: order.id,
-            memberId: order.memberId,
-            productId: p.id,
-            productName: line.productName,
-            quantity: received.quantity,
-            price: line.price,
-            unitCost: line.unitCost,
-            effectiveAt: input.effectiveAt,
-          },
-        ],
-        { session },
-      )
-    )[0];
+    await repo.saveProduct(tx, p);
+    const lot = await repo.createReceipt(tx, {
+      orderId: order.id,
+      memberId: order.memberId,
+      productId: p.id,
+      productName: line.productName,
+      quantity: received.quantity,
+      price: line.price,
+      unitCost: line.unitCost,
+      effectiveAt: input.effectiveAt,
+    });
     await movement(
       {
         productId: p.id,
@@ -185,7 +163,7 @@ async function receiveOrder(id, input, actor, session) {
         effectiveAt: lot.effectiveAt,
       },
       actor,
-      session,
+      tx,
     );
     await movement(
       {
@@ -198,18 +176,18 @@ async function receiveOrder(id, input, actor, session) {
         effectiveAt: lot.effectiveAt,
       },
       actor,
-      session,
+      tx,
     );
     line.receivedQuantity += lot.quantity;
     receipts.push(entity(lot));
   }
-  await incomplete(order.memberId, key, session);
+  await incomplete(order.memberId, key, tx);
   order.status = order.items.every((i) => i.quantity === i.receivedQuantity)
     ? "RECEIVED"
     : "PARTIALLY_RECEIVED";
   order.version++;
-  await order.save({ session });
-  return { id: order.id, order: entity(order), receipts };
+  const saved = await repo.saveOrder(tx, order);
+  return { id: saved.id, order: entity(saved), receipts };
 }
 
 module.exports = { scoped, createOrder, amendOrder, orderStatus, receiveOrder };

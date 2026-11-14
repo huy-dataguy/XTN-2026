@@ -26,7 +26,7 @@ function routerKit() {
       `${operation}:${req.params.id || ""}`,
       req.header("Idempotency-Key"),
       input,
-      (session) => execute(req, input, session),
+      (tx) => execute(req, input, tx),
     );
     res.json(result);
   };
@@ -39,18 +39,13 @@ function routerKit() {
       req.query,
     );
   const list =
-    (Model, query, format = entity) =>
+    (fetch, format = entity) =>
     async (req, res) => {
-      const { limit, offset } = page(req),
-        filter = typeof query === "function" ? query(req) : query;
-      const docs = await Model.find(filter)
-        .sort({ createdAt: -1, _id: -1 })
-        .skip(offset)
-        .limit(limit + 1)
-        .lean();
+      const { limit, offset } = page(req);
+      const rows = await fetch(req, { limit: limit + 1, offset });
       res.json({
-        items: docs.slice(0, limit).map(format),
-        hasMore: docs.length > limit,
+        items: rows.slice(0, limit).map(format),
+        hasMore: rows.length > limit,
         offset,
         limit,
       });
