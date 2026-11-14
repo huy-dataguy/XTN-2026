@@ -22,21 +22,22 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     mutation.mutate();
   };
   return (
-    <div className="login">
-      <div className="login-story">
-        <div className="brand">
-          XTN <span>2026</span>
+      <div className="login">
+        <div className="login-story">
+          <div className="brand">
+            Chiến dịch Xuân Tình Nguyện<span>    CLB Vovinam HCM-UTE</span>
+          </div>
+          <h1>
+            Góp sức nhỏ,
+            <br />
+            lan tỏa yêu thương.
+          </h1>
+          <p>
+            Quản lý sản phẩm, theo dõi đơn hàng và cập nhật kết quả gây quỹ.
+          </p>
         </div>
-        <h1>
-          Mỗi kết quả đều
-          <br />
-          có một hành trình.
-        </h1>
-        <p>
-          Theo dõi hàng đã nhận, kết quả bán và báo cáo của bạn trong một nơi.
-        </p>
-      </div>
-      <form className="panel login-form" onSubmit={submit}>
+        <form className="panel login-form" onSubmit={submit}>
+
         <BadgeTitle />
         <h2>Chào bạn trở lại</h2>
         <p className="muted">Đăng nhập bằng tài khoản được cấp.</p>
