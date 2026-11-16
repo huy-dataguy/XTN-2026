@@ -19,6 +19,7 @@ export interface Product {
   active: boolean;
   needsMigration: boolean;
   category: string;
+  image: string;
 }
 export interface OrderLine {
   productId: string;

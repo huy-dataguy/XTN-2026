@@ -127,14 +127,17 @@ export default function InventoryPage({ user }: { user: User }) {
             {products.map((item) => (
               <div className="stock-row" key={item.id}>
                 <div className="stock-name">
-                  <strong>{item.name}</strong>
-                  <small>
-                    {item.needsMigration
-                      ? "Cần đối soát"
-                      : item.active
-                        ? "Đang cấp"
-                        : "Ngừng cấp"}
-                  </small>
+                  <ProductThumb src={item.image} name={item.name} />
+                  <div>
+                    <strong>{item.name}</strong>
+                    <small>
+                      {item.needsMigration
+                        ? "Cần đối soát"
+                        : item.active
+                          ? "Đang cấp"
+                          : "Ngừng cấp"}
+                    </small>
+                  </div>
                 </div>
                 <div className="stock-metrics">
                   <span>
@@ -241,6 +244,33 @@ export default function InventoryPage({ user }: { user: User }) {
   );
 }
 
+function ProductThumb({
+  src,
+  name,
+  large,
+}: {
+  src?: string;
+  name: string;
+  large?: boolean;
+}) {
+  return src ? (
+    <img
+      className={`product-thumb${large ? " lg" : ""}`}
+      src={src}
+      alt={name}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+    />
+  ) : (
+    <span
+      className={`product-thumb placeholder${large ? " lg" : ""}`}
+      aria-hidden="true"
+    >
+      {name.trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
 function ProductDialog({ onClose }: { onClose: () => void }) {
   const write = useWrite();
   const [form, setForm] = useState({
@@ -248,6 +278,7 @@ function ProductDialog({ onClose }: { onClose: () => void }) {
     price: 0,
     unitCost: "",
     openingStock: 0,
+    image: "",
   });
   return (
     <Dialog
@@ -293,6 +324,22 @@ function ProductDialog({ onClose }: { onClose: () => void }) {
             onChange={(event) => setForm({ ...form, name: event.target.value })}
           />
         </Field>
+        <Field label="URL ảnh sản phẩm">
+          <input
+            type="url"
+            inputMode="url"
+            placeholder="https://…"
+            value={form.image}
+            onChange={(event) =>
+              setForm({ ...form, image: event.target.value })
+            }
+          />
+        </Field>
+        {form.image && (
+          <div className="image-preview">
+            <ProductThumb src={form.image} name={form.name || "Ảnh"} large />
+          </div>
+        )}
         <div className="form-grid">
           <Field label="Giá bán (đ)">
             <input
@@ -347,6 +394,7 @@ function ManageDialog({
   const write = useWrite();
   const [price, setPrice] = useState(product.price);
   const [cost, setCost] = useState(product.unitCost?.toString() || "");
+  const [image, setImage] = useState(product.image || "");
   const [reason, setReason] = useState("");
   const [delta, setDelta] = useState(0);
   const [damaged, setDamaged] = useState(0);
@@ -369,7 +417,11 @@ function ManageDialog({
               {
                 path: `/products/${product.id}`,
                 method: "PUT",
-                body: { price, unitCost: cost === "" ? null : Number(cost) },
+                body: {
+                  price,
+                  unitCost: cost === "" ? null : Number(cost),
+                  image,
+                },
               },
               { onSuccess: onClose },
             );
@@ -394,6 +446,18 @@ function ManageDialog({
                 onChange={(event) => setCost(event.target.value)}
               />
             </Field>
+          </div>
+          <Field label="URL ảnh sản phẩm">
+            <input
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              value={image}
+              onChange={(event) => setImage(event.target.value)}
+            />
+          </Field>
+          <div className="image-preview">
+            <ProductThumb src={image} name={product.name} large />
           </div>
           <div className="actions">
             <button className="btn primary" disabled={write.isPending}>

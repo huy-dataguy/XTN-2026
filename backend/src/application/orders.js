@@ -64,14 +64,11 @@ async function amendOrder(id, input, actor, tx) {
   if (!order?.memberId)
     fail(404, "NOT_FOUND", "Không tìm thấy đơn hoặc cần migrate");
   owner(actor, order.memberId);
-  if (
-    order.version !== input.version ||
-    !["PENDING", "APPROVED"].includes(order.status)
-  )
+  if (order.version !== input.version || order.status !== "PENDING")
     fail(
       409,
       "STATE_CONFLICT",
-      "Đơn đã đổi hoặc đã nhận hàng; tạo yêu cầu bổ sung",
+      "Đơn đã duyệt/đã đổi hoặc đã nhận hàng; tạo yêu cầu bổ sung",
     );
   order.items = await reserveItems(input.items, order.items, tx);
   order.totalAmount = safeMoney(

@@ -22,6 +22,8 @@ import {
   useWrite,
 } from "../shared/ui";
 
+const fetchProducts = () => api<Page<Product>>("/products?limit=200");
+
 export default function Orders({ user }: { user: User }) {
   const [offset, setOffset] = useOffset();
   const [creating, setCreating] = useState(false);
@@ -32,8 +34,20 @@ export default function Orders({ user }: { user: User }) {
     queryKey: ["orders", offset],
     queryFn: () => api<Page<Order>>(`/orders?offset=${offset}`),
   });
+  const catalog = useQuery({
+    queryKey: ["products", "picker"],
+    queryFn: fetchProducts,
+    enabled: user.role !== "ADMIN",
+  });
   const write = useWrite();
   const isAdmin = user.role === "ADMIN";
+  const available = useMemo(
+    () =>
+      (catalog.data?.items || []).filter(
+        (product) => product.active && !product.needsMigration,
+      ),
+    [catalog.data],
+  );
 
   return (
     <>
@@ -42,7 +56,7 @@ export default function Orders({ user }: { user: User }) {
           <h1>Đơn cấp hàng</h1>
           <p>Theo dõi yêu cầu và xác nhận hàng thực nhận.</p>
         </div>
-        {user.role === "DISTRIBUTOR" && !!query.data?.items.length && (
+        {user.role === "DISTRIBUTOR" && (
           <button
             type="button"
             className="btn primary"
@@ -55,6 +69,53 @@ export default function Orders({ user }: { user: User }) {
 
       {query.error && <ErrorNotice error={query.error} />}
       {query.isPending && <p className="loading">Đang tải đơn hàng…</p>}
+
+      {!isAdmin && (
+        <section className="panel catalog-panel">
+          <div className="section-head">
+            <div>
+              <h2>Danh mục sản phẩm</h2>
+              <small>Sản phẩm đang cấp tại kho trung tâm.</small>
+            </div>
+            {catalog.data && (
+              <Badge tone="green">{available.length} sản phẩm</Badge>
+            )}
+          </div>
+          {catalog.error && <ErrorNotice error={catalog.error} />}
+          {catalog.isPending && <p className="loading">Đang tải sản phẩm…</p>}
+          {!catalog.isPending && !available.length && (
+            <p className="muted">Chưa có sản phẩm đang cấp.</p>
+          )}
+          <div className="catalog-grid">
+            {available.map((product) => (
+              <article className="catalog-card" key={product.id}>
+                {product.image ? (
+                  <img
+                    className="catalog-image"
+                    src={product.image}
+                    alt={product.name}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span
+                    className="catalog-image placeholder"
+                    aria-hidden="true"
+                  >
+                    <Icon name="inventory" size={22} />
+                  </span>
+                )}
+                <strong>{product.name}</strong>
+                <small>{money(product.price)}</small>
+                <small className="catalog-stock">
+                  Còn {product.stock ?? "—"}
+                </small>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       {query.data && !query.data.items.length && (
         <EmptyState
           icon="orders"
@@ -239,7 +300,7 @@ function OrderCard({
             </button>
           </>
         )}
-        {["PENDING", "APPROVED"].includes(order.status) && (
+        {order.status === "PENDING" && (
           <button type="button" className="btn sm ghost" onClick={onEdit}>
             Sửa yêu cầu
           </button>
@@ -271,7 +332,7 @@ function OrderDialog({
 }) {
   const products = useQuery({
     queryKey: ["products", "picker"],
-    queryFn: () => api<Page<Product>>("/products?limit=200"),
+    queryFn: fetchProducts,
   });
   const [search, setSearch] = useState("");
   const [week, setWeek] = useState(editing?.intendedPeriodId || monday());
@@ -367,11 +428,29 @@ function OrderDialog({
                 className={`picker-row${quantity ? " selected" : ""}`}
                 key={product.id}
               >
-                <div className="picker-copy">
-                  <strong>{product.name}</strong>
-                  <small>
-                    {money(product.price)} · còn {product.stock ?? "—"}
-                  </small>
+                <div className="picker-main">
+                  {product.image ? (
+                    <img
+                      className="picker-thumb"
+                      src={product.image}
+                      alt={product.name}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span
+                      className="picker-thumb placeholder"
+                      aria-hidden="true"
+                    >
+                      <Icon name="inventory" size={16} />
+                    </span>
+                  )}
+                  <div className="picker-copy">
+                    <strong>{product.name}</strong>
+                    <small>
+                      {money(product.price)} · còn {product.stock ?? "—"}
+                    </small>
+                  </div>
                 </div>
                 <div className="stepper">
                   <button
@@ -437,7 +516,10 @@ function ReceiptDialog({
   );
   const [when, setWhen] = useState(nowLocal());
   const write = useWrite();
-  const receiving = Object.values(counts).reduce((sum, value) => sum + value, 0);
+  const receiving = Object.values(counts).reduce(
+    (sum, value) => sum + value,
+    0,
+  );
 
   return (
     <Dialog
@@ -510,7 +592,10 @@ function ReceiptDialog({
                     type="button"
                     aria-label={`Giảm ${item.productName}`}
                     onClick={() =>
-                      setCounts({ ...counts, [item.productId]: Math.max(0, value - 1) })
+                      setCounts({
+                        ...counts,
+                        [item.productId]: Math.max(0, value - 1),
+                      })
                     }
                     disabled={value === 0}
                   >

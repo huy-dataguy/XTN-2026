@@ -20,6 +20,13 @@ const items = z
   .min(1)
   .max(100);
 const version = z.number().int().min(0);
+const imageUrl = z
+  .string()
+  .max(1000)
+  .refine(
+    (value) => value === "" || /^https?:\/\//i.test(value),
+    "URL ảnh phải bắt đầu bằng http:// hoặc https://",
+  );
 const product = z
   .object({
     name: text,
@@ -27,7 +34,7 @@ const product = z
     unitCost: money.nullable().default(null),
     openingStock: qty,
     category: z.string().max(100).default(""),
-    image: z.string().max(1000).default(""),
+    image: imageUrl.default(""),
   })
   .strict();
 const productUpdate = z
@@ -36,7 +43,7 @@ const productUpdate = z
     price: money.optional(),
     unitCost: money.nullable().optional(),
     category: z.string().max(100).optional(),
-    image: z.string().max(1000).optional(),
+    image: imageUrl.optional(),
     active: z.boolean().optional(),
   })
   .strict();
