@@ -2,6 +2,7 @@ const repo = require("../infrastructure/repository");
 const { many } = require("../infrastructure/db");
 const { weeks, bounds, safeMoney } = require("../domain/policy");
 const { entity } = require("../infrastructure/transaction");
+const kpi = require("./kpi");
 function inventoryAt(movements, cutoff) {
   let sellable = 0,
     damaged = 0;
@@ -125,6 +126,7 @@ async function weekly(
   );
   const periods = await repo.getPeriods(tx, keys),
     periodMap = new Map(periods.map((p) => [p.id, p]));
+  const globalTargets = await kpi.targetsByWeek(tx, keys);
   trace("states");
   const headers = await many(
     tx,
@@ -270,7 +272,14 @@ async function weekly(
           latest: -Infinity,
         },
         summary = finishMetric(financial.get(slot) || accumulator()),
-        target = state?.targetRevenue ?? null,
+        globalTarget = globalTargets.get(key) ?? null,
+        target = state?.targetRevenue ?? globalTarget,
+        targetSource =
+          state?.targetRevenue != null
+            ? "MEMBER"
+            : globalTarget != null
+              ? "GLOBAL"
+              : null,
         complete = !!state?.complete && stats.pending === 0;
       totals.revenue = safeMoney(totals.revenue + summary.revenue);
       totals.sold = safeMoney(totals.sold + summary.sold);
@@ -299,6 +308,8 @@ async function weekly(
         periodId: key,
         ...summary,
         targetRevenue: target,
+        globalTargetRevenue: globalTarget,
+        targetSource,
         achievement: target > 0 ? (summary.revenue / target) * 100 : null,
         opening: before,
         closing: balanceDTO(balance),

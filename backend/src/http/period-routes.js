@@ -4,6 +4,7 @@ const p = require("../domain/policy");
 const s = require("./schemas");
 const { routerKit } = require("./router-kit");
 const periods = require("../application/periods");
+const kpi = require("../application/kpi");
 function periodRoutes() {
   const { router, admin, mutate } = routerKit();
   router.post(
@@ -56,6 +57,7 @@ function periodRoutes() {
           })
         )
           p.fail(409, "PENDING_REPORTS", "Còn báo cáo chờ duyệt");
+        await kpi.snapshotWeek(input.periodId, tx);
         state.complete = true;
         state.completedAt = new Date();
         return entity(await repo.saveMemberPeriod(tx, state));

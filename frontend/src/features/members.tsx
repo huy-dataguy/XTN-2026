@@ -125,7 +125,7 @@ export default function Members() {
                     className="btn sm"
                     onClick={() => setTargeting(user)}
                   >
-                    Mục tiêu
+                    Mục tiêu / gia hạn
                   </button>
                 )}
                 <button
@@ -425,7 +425,7 @@ function TargetDialog({ user, onClose }: { user: User; onClose: () => void }) {
     <Dialog
       open
       onClose={onClose}
-      title={`Mục tiêu · ${user.name}`}
+      title={`Mục tiêu riêng · ${user.name}`}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -437,7 +437,7 @@ function TargetDialog({ user, onClose }: { user: User; onClose: () => void }) {
             className="btn primary"
             disabled={write.isPending || !reason}
           >
-            Lưu
+            Lưu mục tiêu / gia hạn
           </button>
         </>
       }
@@ -470,12 +470,12 @@ function TargetDialog({ user, onClose }: { user: User; onClose: () => void }) {
               onChange={(event) => setWeek(event.target.value)}
             />
           </Field>
-          <Field label="Mục tiêu doanh thu (đ)">
+          <Field label="Mục tiêu doanh thu riêng (đ)">
             <input
               type="number"
               min="0"
               step="1"
-              placeholder="Không bắt buộc"
+              placeholder="Để trống = dùng KPI chung"
               value={target}
               onChange={(event) => setTarget(event.target.value)}
             />
@@ -497,8 +497,9 @@ function TargetDialog({ user, onClose }: { user: User; onClose: () => void }) {
           </Field>
         </div>
         <p className="fine-print">
-          Chỉ cần nhập mục tiêu, gia hạn hoặc cả hai. Thao tác được lưu vào lịch
-          sử kỳ.
+          Để trống mục tiêu để dùng KPI chung theo giai đoạn; nhập số để ghi đè
+          riêng cho thành viên này. Có thể nhập gia hạn, mục tiêu hoặc cả hai.
+          Thao tác được lưu vào lịch sử kỳ.
         </p>
         <MutationStatus pending={write.isPending} error={write.error} />
       </form>

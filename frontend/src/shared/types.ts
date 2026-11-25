@@ -106,6 +106,8 @@ export interface WeeklyRow {
   grossProfit: number | null;
   cogs: number | null;
   targetRevenue: number | null;
+  globalTargetRevenue: number | null;
+  targetSource: "GLOBAL" | "MEMBER" | null;
   achievement: number | null;
   opening: Balance;
   closing: Balance;
@@ -152,6 +154,29 @@ export interface Weekly {
     incompleteRows: number;
     achievement: number | null;
   };
+}
+export interface KpiPhase {
+  id: string;
+  startPeriod: string;
+  endPeriod: string;
+  weeklyTarget: number;
+  reason: string;
+  createdBy: string | null;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface KpiSnapshot {
+  periodId: string;
+  weeklyTarget: number;
+  phaseId: string;
+  createdAt: string;
+}
+export interface KpiOverview {
+  from: string;
+  to: string;
+  phases: KpiPhase[];
+  weeks: KpiSnapshot[];
 }
 export interface Task {
   id: string;

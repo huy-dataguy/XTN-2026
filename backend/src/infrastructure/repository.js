@@ -140,6 +140,29 @@ function memberPeriodRow(r) {
     updatedAt: r.updated_at,
   };
 }
+function kpiPhaseRow(r) {
+  if (!r) return null;
+  return {
+    id: r.id,
+    startPeriod: r.start_period,
+    endPeriod: r.end_period,
+    weeklyTarget: number(r.weekly_target),
+    reason: r.reason,
+    createdBy: r.created_by,
+    revision: r.revision,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+function kpiSnapshotRow(r) {
+  if (!r) return null;
+  return {
+    periodId: r.period_id,
+    weeklyTarget: number(r.weekly_target),
+    phaseId: r.phase_id,
+    createdAt: r.created_at,
+  };
+}
 function statementRow(r) {
   if (!r) return null;
   return {
@@ -688,6 +711,92 @@ async function invalidateMemberPeriodsAfter(executor, { memberId, key }) {
   );
 }
 
+async function listKpiPhases(executor, { limit = 200, offset = 0 } = {}) {
+  const rows = await many(
+    executor,
+    `SELECT * FROM kpi_phases ORDER BY start_period DESC, id DESC LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+  return rows.map(kpiPhaseRow);
+}
+async function getKpiPhaseForUpdate(executor, id) {
+  return kpiPhaseRow(
+    await one(executor, "SELECT * FROM kpi_phases WHERE id = $1 FOR UPDATE", [id]),
+  );
+}
+async function listKpiPhasesOverlapping(executor, { start, end, excludeId }) {
+  const rows = await many(
+    executor,
+    `SELECT * FROM kpi_phases
+      WHERE start_period <= $2 AND end_period >= $1
+        AND ($3::text IS NULL OR id <> $3)
+      ORDER BY start_period`,
+    [start, end, excludeId || null],
+  );
+  return rows.map(kpiPhaseRow);
+}
+async function createKpiPhase(executor, phase) {
+  await many(
+    executor,
+    `INSERT INTO kpi_phases
+       (id, start_period, end_period, weekly_target, reason, created_by, revision)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      phase.id,
+      phase.startPeriod,
+      phase.endPeriod,
+      phase.weeklyTarget,
+      phase.reason,
+      phase.createdBy || null,
+      phase.revision || 0,
+    ],
+  );
+  return getKpiPhaseForUpdate(executor, phase.id);
+}
+async function saveKpiPhase(executor, phase) {
+  const row = await one(
+    executor,
+    `UPDATE kpi_phases SET start_period = $2, end_period = $3, weekly_target = $4,
+       reason = $5, revision = $6, updated_at = now()
+     WHERE id = $1 RETURNING *`,
+    [
+      phase.id,
+      phase.startPeriod,
+      phase.endPeriod,
+      phase.weeklyTarget,
+      phase.reason,
+      phase.revision,
+    ],
+  );
+  return kpiPhaseRow(row);
+}
+async function getKpiSnapshots(executor, keys) {
+  const rows = await many(
+    executor,
+    "SELECT * FROM kpi_snapshots WHERE period_id = ANY($1)",
+    [keys],
+  );
+  return rows.map(kpiSnapshotRow);
+}
+async function insertKpiSnapshots(executor, entries) {
+  if (!entries.length) return [];
+  await many(
+    executor,
+    `INSERT INTO kpi_snapshots (period_id, weekly_target, phase_id)
+     SELECT * FROM UNNEST($1::text[], $2::bigint[], $3::text[])
+     ON CONFLICT (period_id) DO NOTHING`,
+    [
+      entries.map((e) => e.periodId),
+      entries.map((e) => e.weeklyTarget),
+      entries.map((e) => e.phaseId),
+    ],
+  );
+  return getKpiSnapshots(
+    executor,
+    entries.map((e) => e.periodId),
+  );
+}
+
 async function bumpGuard(executor, id) {
   return one(
     executor,
@@ -948,6 +1057,13 @@ module.exports = {
   getMemberPeriods,
   saveMemberPeriod,
   invalidateMemberPeriodsAfter,
+  listKpiPhases,
+  getKpiPhaseForUpdate,
+  listKpiPhasesOverlapping,
+  createKpiPhase,
+  saveKpiPhase,
+  getKpiSnapshots,
+  insertKpiSnapshots,
   bumpGuard,
   claimCommand,
   getCommand,

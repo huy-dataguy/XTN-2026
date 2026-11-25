@@ -1,11 +1,20 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../shared/api";
-import type { Order, Page, Weekly, User } from "../shared/types";
+import type {
+  KpiOverview,
+  KpiPhase,
+  Order,
+  Page,
+  Weekly,
+  User,
+} from "../shared/types";
 import {
   Badge,
+  Dialog,
   ErrorNotice,
+  Field,
   Icon,
   MutationStatus,
   PageControls,
@@ -17,6 +26,188 @@ import {
   useWrite,
   weekRange,
 } from "../shared/ui";
+
+function KpiPanel({ from, to }: { from: string; to: string }) {
+  const write = useWrite();
+  const query = useQuery({
+    queryKey: ["kpi", from, to],
+    queryFn: () => api<KpiOverview>(`/kpi?from=${from}&to=${to}`),
+  });
+  const [editing, setEditing] = useState<KpiPhase | "new" | null>(null);
+  const [form, setForm] = useState({
+    start: from,
+    end: to,
+    amount: "",
+    reason: "",
+  });
+
+  const openCreate = () => {
+    setForm({ start: from, end: to, amount: "", reason: "" });
+    setEditing("new");
+  };
+  const openEdit = (phase: KpiPhase) => {
+    setForm({
+      start: phase.startPeriod,
+      end: phase.endPeriod,
+      amount: String(phase.weeklyTarget),
+      reason: "",
+    });
+    setEditing(phase);
+  };
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    if (!editing) return;
+    const body = {
+      startPeriod: monday(new Date(form.start)),
+      endPeriod: monday(new Date(form.end)),
+      weeklyTarget: Number(form.amount),
+      reason: form.reason,
+    };
+    write.mutate(
+      editing === "new"
+        ? { path: "/kpi/phases", body }
+        : {
+            path: `/kpi/phases/${editing.id}`,
+            method: "PATCH",
+            body: { ...body, version: editing.revision },
+          },
+      { onSuccess: () => setEditing(null) },
+    );
+  };
+
+  return (
+    <section className="panel kpi-panel">
+      <div className="section-head">
+        <h2>Cấu hình KPI doanh thu</h2>
+        <small>{weekRange(from, to)}</small>
+      </div>
+      {query.isPending && <p className="loading">Đang tải KPI…</p>}
+      {query.error && (
+        <ErrorNotice error={query.error} retry={() => void query.refetch()} />
+      )}
+      {query.data &&
+        (query.data.phases.length ? (
+          <div className="kpi-list">
+            {query.data.phases.map((phase) => (
+              <div className="kpi-row" key={phase.id}>
+                <div>
+                  <strong>{money(phase.weeklyTarget)} / tuần</strong>
+                  <small>
+                    {weekRange(phase.startPeriod, phase.endPeriod)} ·{" "}
+                    {phase.reason} · phiên bản {phase.revision}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  className="btn sm"
+                  onClick={() => openEdit(phase)}
+                >
+                  Sửa
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">Chưa cấu hình KPI cho giai đoạn này.</p>
+        ))}
+      {!!query.data?.weeks.length && (
+        <p className="fine-print">
+          Tuần đã chốt:{" "}
+          {query.data.weeks
+            .map((week) => `${week.periodId} ${money(week.weeklyTarget)}`)
+            .join(" · ")}
+        </p>
+      )}
+      <div className="actions">
+        <button type="button" className="btn primary" onClick={openCreate}>
+          <Icon name="plus" size={16} /> Thêm KPI giai đoạn
+        </button>
+      </div>
+      <MutationStatus pending={write.isPending} error={write.error} />
+      {editing && (
+        <Dialog
+          open
+          onClose={() => setEditing(null)}
+          title={
+            editing === "new"
+              ? "Cấu hình KPI doanh thu"
+              : "Cập nhật KPI doanh thu"
+          }
+          footer={
+            <>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setEditing(null)}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                form="kpi-form"
+                className="btn primary"
+                disabled={write.isPending || !form.reason || !form.amount}
+              >
+                Lưu
+              </button>
+            </>
+          }
+        >
+          <form id="kpi-form" onSubmit={save}>
+            <div className="form-grid">
+              <Field label="Từ tuần">
+                <input
+                  type="date"
+                  required
+                  value={form.start}
+                  onChange={(event) =>
+                    setForm({ ...form, start: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Đến tuần">
+                <input
+                  type="date"
+                  required
+                  value={form.end}
+                  onChange={(event) =>
+                    setForm({ ...form, end: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="KPI mỗi tuần (đ)">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  value={form.amount}
+                  onChange={(event) =>
+                    setForm({ ...form, amount: event.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Lý do">
+                <input
+                  required
+                  value={form.reason}
+                  onChange={(event) =>
+                    setForm({ ...form, reason: event.target.value })
+                  }
+                />
+              </Field>
+            </div>
+            <p className="fine-print">
+              KPI áp dụng chung cho mọi thành viên trong khoảng tuần đã chọn.
+              Tuần đã chốt giữ nguyên KPI cũ; thay đổi chỉ áp dụng cho tuần chưa
+              chốt. Có thể đặt KPI riêng cho từng thành viên ở trang Thành viên.
+            </p>
+          </form>
+        </Dialog>
+      )}
+    </section>
+  );
+}
 
 export default function Dashboard({ user }: { user: User }) {
   const [params, setParams] = useSearchParams();
@@ -466,6 +657,8 @@ export default function Dashboard({ user }: { user: User }) {
                   }}
                 />
               </section>
+
+              <KpiPanel from={from} to={to} />
             </>
           ) : (
             <>
@@ -491,6 +684,21 @@ export default function Dashboard({ user }: { user: User }) {
                     </span>
                     <span>
                       <strong>{selfTotal?.closing.physical ?? 0}</strong> vật lý
+                    </span>
+                  </div>
+                  <div className="week-metrics">
+                    <span>
+                      <strong>{money(selfRow?.targetRevenue ?? null)}</strong>{" "}
+                      KPI tuần
+                      {selfRow?.targetSource === "MEMBER" ? " (riêng)" : ""}
+                    </span>
+                    <span>
+                      <strong>
+                        {selfRow?.achievement == null
+                          ? "—"
+                          : `${selfRow.achievement.toFixed(1)}%`}
+                      </strong>{" "}
+                      đạt KPI
                     </span>
                   </div>
                 </div>
@@ -539,7 +747,13 @@ export default function Dashboard({ user }: { user: User }) {
                             ? "—"
                             : `${row.achievement.toFixed(0)}%`}
                         </strong>
-                        <small>KPI</small>
+                        <small>
+                          KPI{" "}
+                          {row.targetRevenue == null
+                            ? "—"
+                            : money(row.targetRevenue)}
+                          {row.targetSource === "MEMBER" ? " · riêng" : ""}
+                        </small>
                       </div>
                       <Badge tone={row.complete ? "green" : "amber"}>
                         {row.complete ? "Đã chốt" : "Chưa chốt"}

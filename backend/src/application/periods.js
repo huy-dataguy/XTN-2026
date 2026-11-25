@@ -1,5 +1,6 @@
 const repo = require("../infrastructure/repository");
 const { fail, bounds } = require("../domain/policy");
+const kpi = require("./kpi");
 async function openPeriod(key, tx) {
   const period = await repo.openPeriod(tx, key);
   if (period.status === "CLOSED")
@@ -50,6 +51,7 @@ async function closePeriod(key, tx) {
   const period = await openPeriod(key, tx);
   if (await repo.pendingReportExists(tx, { periodId: key }))
     fail(409, "PENDING_REPORTS", "Còn báo cáo trong kỳ chờ duyệt");
+  await kpi.snapshotWeek(key, tx);
   const members = await repo.listMembers(tx, {
     createdBefore: bounds(key).end,
     activeOnly: true,

@@ -15,7 +15,12 @@ Report: memberId/periodId/lines(lotId,effectiveAt,sold,damaged,giftGood,giftDama
 notes/status/version/replacesId nullable/submittedAt/approvedAt; totals derived.
 Period: id/revision/status OPEN|CLOSED; MemberPeriod: memberId/periodId,
 extensionUntil/extensionReason/complete/completedAt/targetRevenue nullable/group snapshot.
-Default deadline is calculated from period bounds; API returns deadlineAt.
+KpiPhase: id/startPeriod/endPeriod/weeklyTarget/reason/revision, configured by
+admin for all members; phases for the same weeks cannot overlap. KpiSnapshot:
+periodId/weeklyTarget/phaseId, immutable, frozen when a member completes the week
+or the period closes. Effective target = member override ?? weekly snapshot ??
+phase target; `targetSource` reports which one was used. Default deadline is
+calculated from period bounds; API returns deadlineAt.
 Product: name/price/unitCost nullable/onHand/damagedOnHand/reserved/active/inventoryVersion.
 Command: actor+operation+key identity, requestHash, response (no secrets).
 Audit: actor/action/source/reason/after/time; no password/hash/token in returned DTOs.

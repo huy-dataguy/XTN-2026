@@ -67,6 +67,23 @@ const memberPeriod = z
     reason: text,
   })
   .strict();
+const kpiPhase = z
+  .object({
+    startPeriod: week,
+    endPeriod: week,
+    weeklyTarget: money,
+    reason: text,
+  })
+  .strict();
+const kpiPhaseUpdate = z
+  .object({
+    version,
+    startPeriod: week.optional(),
+    endPeriod: week.optional(),
+    weeklyTarget: money.optional(),
+    reason: text,
+  })
+  .strict();
 const warehouse = z
   .object({
     damaged: qty.default(0),
@@ -137,6 +154,8 @@ module.exports = {
   reportStatus,
   correction,
   memberPeriod,
+  kpiPhase,
+  kpiPhaseUpdate,
   warehouse,
   user,
   group,

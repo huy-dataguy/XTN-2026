@@ -8,7 +8,10 @@ Confirmed: multiple orders/receipts/delta reports weekly; delayed receipts and
 explicit member-period extensions; damaged inventory may be gifted. Use Vietnam
 calendar weeks Monday→Monday. Submission deadline is Monday 23:59:59.999 Vietnam
 after that week; admin may extend, with reason. Performance date is explicit and
-separate from submission. Targets optional per member-period, configured by admin.
+separate from submission. Admin configures one KPI amount per date-range phase
+for all members; a member-period target remains an optional override. Editing a
+phase changes only weeks not yet frozen; each week's KPI snapshot is frozen at
+member completion or period close and never rewritten.
 
 Inventory: warehouse onHand and reserved separate. New products post opening
 movement. Legacy products without inventoryVersion=1 fail writes until reviewed

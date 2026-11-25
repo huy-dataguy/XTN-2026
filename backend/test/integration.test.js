@@ -51,7 +51,7 @@ before(async () => {
   if (!enabled) return;
   await query(`TRUNCATE users, products, orders, receipts, reports, movements,
     periods, member_periods, commands, audit_events, statements, tags, tasks,
-    system_guards`);
+    system_guards, kpi_phases, kpi_snapshots`);
   const password = await bcrypt.hash("fixture-password-2026", 4);
   const users = await Promise.all([
     repo.createUser(undefined, {
@@ -376,6 +376,87 @@ test("Postgres API port keeps inventory, reporting, idempotency and auth", {
       admin,
     );
     assert.equal(reopened.status, "OPEN");
+  });
+
+  await t.test("global weekly KPI phase, override and frozen snapshot", async () => {
+    const alice = (await ok("/auth/me", "GET", undefined, member)).id;
+    assert.equal(
+      (
+        await request(
+          "/kpi/phases",
+          "POST",
+          { startPeriod: W1, endPeriod: W2, weeklyTarget: 200000, reason: "KPI chung" },
+          member,
+        )
+      ).status,
+      403,
+    );
+    const phase = await ok(
+      "/kpi/phases",
+      "POST",
+      { startPeriod: W1, endPeriod: W2, weeklyTarget: 200000, reason: "KPI chung" },
+      admin,
+    );
+    assert.equal(phase.weeklyTarget, 200000);
+    assert.equal(
+      (
+        await request(
+          "/kpi/phases",
+          "POST",
+          { startPeriod: W2, endPeriod: W2, weeklyTarget: 300000, reason: "Chồng lấn" },
+          admin,
+        )
+      ).status,
+      409,
+    );
+    const overview = await ok(`/kpi?from=${W1}&to=${W2}`, "GET", undefined, member);
+    assert.equal(overview.phases.length, 1);
+    assert.equal(overview.phases[0].weeklyTarget, 200000);
+
+    let analytics = await ok(
+      `/analytics/weekly?from=${W1}&to=${W2}`,
+      "GET",
+      undefined,
+      admin,
+    );
+    const find = (name, week) =>
+      analytics.rows.find((r) => r.memberName === name && r.periodId === week);
+    assert.equal(find("Alice", W2).targetRevenue, 50000);
+    assert.equal(find("Alice", W2).targetSource, "MEMBER");
+    assert.equal(find("Alice", W1).targetRevenue, 200000);
+    assert.equal(find("Alice", W1).targetSource, "GLOBAL");
+    assert.equal(find("Alice", W1).globalTargetRevenue, 200000);
+
+    await ok(
+      "/periods/member",
+      "POST",
+      {
+        memberId: alice,
+        periodId: W1,
+        extensionUntil: new Date(Date.now() + 60000).toISOString(),
+        reason: "Gia hạn chốt KPI",
+      },
+      admin,
+    );
+    await ok("/periods/complete", "POST", { periodId: W1 }, member);
+    await ok(
+      `/kpi/phases/${phase.id}`,
+      "PATCH",
+      { version: 0, weeklyTarget: 300000, reason: "Tăng KPI" },
+      admin,
+    );
+
+    analytics = await ok(
+      `/analytics/weekly?from=${W1}&to=${W2}`,
+      "GET",
+      undefined,
+      admin,
+    );
+    assert.equal(find("Alice", W1).targetRevenue, 200000);
+    assert.equal(find("Alice", W2).targetRevenue, 50000);
+    const after = await ok(`/kpi?from=${W1}&to=${W2}`, "GET", undefined, admin);
+    assert.equal(after.phases[0].weeklyTarget, 300000);
+    assert.equal(after.phases[0].revision, 1);
   });
 
   await t.test("cash statements deduplicate references", async () => {

@@ -191,6 +191,26 @@ CREATE TABLE IF NOT EXISTS xtn.system_guards (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS xtn.kpi_phases (
+  id text PRIMARY KEY,
+  start_period text NOT NULL,
+  end_period text NOT NULL,
+  weekly_target bigint NOT NULL,
+  reason text NOT NULL,
+  created_by text,
+  revision integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (start_period <= end_period)
+);
+
+CREATE TABLE IF NOT EXISTS xtn.kpi_snapshots (
+  period_id text PRIMARY KEY,
+  weekly_target bigint NOT NULL,
+  phase_id text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS users_role_created_idx ON xtn.users (role, created_at, id);
 CREATE INDEX IF NOT EXISTS users_active_idx ON xtn.users (active);
 CREATE INDEX IF NOT EXISTS products_created_idx ON xtn.products (created_at DESC, id DESC);
@@ -218,3 +238,5 @@ CREATE INDEX IF NOT EXISTS tags_created_idx ON xtn.tags (created_at DESC, id DES
 CREATE INDEX IF NOT EXISTS tasks_created_idx ON xtn.tasks (created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS audit_created_idx ON xtn.audit_events (created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS commands_created_idx ON xtn.commands (created_at);
+CREATE INDEX IF NOT EXISTS kpi_phases_period_idx ON xtn.kpi_phases (start_period, end_period);
+CREATE INDEX IF NOT EXISTS kpi_snapshots_created_idx ON xtn.kpi_snapshots (created_at DESC);
